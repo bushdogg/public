@@ -1,0 +1,169 @@
+.App {
+  font-family: sans-serif;
+}
+
+.image {
+  display: inline-block;
+  /* width: 50rem; */
+  height: auto;
+  vertical-align: bottom;
+}
+
+.form {
+  display: flex;
+  margin-bottom: 1rem;
+}
+
+.input {
+  background: rgb(226, 226, 226);
+  padding: 0.5rem;
+  width: 12rem;
+}
+
+.input + .input {
+  margin-left: 0.5rem;
+}
+
+label {
+  display: block;
+  font-size: 0.85rem;
+  margin-bottom: 0.3rem;
+}
+
+input {
+  font: inherit;
+  padding: 0.3rem;
+  width: 4rem;
+}
+
+.imageWrapper {
+  overflow: hidden;
+  position: relative;
+  display: inline-block;
+}
+
+.tile {
+  position: absolute;
+  top: 0;
+  left: 0;
+  /* background: rgba(204, 43, 43, 0.4); */
+  /* border: 1px solid rgba(255, 0, 0, 0.8); */
+}
+.subtile {
+    position: absolute;
+    top: 0;
+    left: 0;
+    /* background: rgba(204, 43, 43, 0.4); */
+    /* border: 1px solid rgba(255, 0, 0, 0.8); */
+  }
+  
+.tileContent {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.subtileContent {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    background: rgba(0, 0, 0, 0.2);
+  }
+
+  .subtileBorder {
+    position: absolute;
+    top: 0;
+    left: 0;
+  }
+
+.tileBorder {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.tileBorderContent {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: absolute;
+  top: -1px;
+  right: -1px;
+  bottom: 0;
+  left: 0;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: white;
+  font-size: 0.7rem;
+}
+
+.subtileBorderContent {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: absolute;
+    top: -1px;
+    right: -1px;
+    bottom: 0;
+    left: 0;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    color: white;
+    font-size: 0.7rem;
+  }
+  
+.image2 {
+    display: inline-block;
+    width: 50rem;
+    height: auto;
+    vertical-align: bottom;
+  }
+  
+.imageWrapper2 {
+    overflow: hidden;
+    position: absolute;
+    display: inline-block;
+  }
+  
+  
+.tile2 {
+    position: absolute;
+    top: 0;
+    left: 0;
+    /* background: rgba(204, 43, 43, 0.4); */
+    /* border: 1px solid rgba(255, 0, 0, 0.8); */
+  }
+
+.tileContent2 {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    /* background: red; */
+    /* background: rgba(0, 0, 0, 0.2); */
+  }
+  
+  .tileBorder2 {
+    position: absolute;
+    top: 0;
+    left: 0;
+  }
+  
+.tileBorderContent2 {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: absolute;
+    top: -1px;
+    right: -1px;
+    bottom: 0;
+    left: 0;
+    /* border: 1px solid black; */
+    /* color: white; */
+    font-size: 0.7rem;
+  }
+  
