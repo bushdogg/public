@@ -1,10 +1,65 @@
-import React, { useState, useEffect, useRef, Component } from "react";
+import React, { useState, useEffect, useRef, Component, act } from "react";
 import ColorPicker, { useColorPicker } from 'react-best-gradient-color-picker'
 import Canvas from './Canvas2Component'   
 import { TransformWrapper, TransformComponent, useControls } from "react-zoom-pan-pinch";
 import axios from 'axios';
+import GradientBuilder from "./gradientBuilder/GradientBuilder";
 
 const image = acf_vars.my_localized_var.url
+    function convertHexToRgbA(hexVal) {
+        let ret;
+
+        // If the hex value is valid.
+        if (/^#([A-Fa-f0-9]{3}){1,2}$/.test(hexVal)) {
+
+            // Getting the content after '#',
+            // eg. 'ffffff' in case of '#ffffff'
+            ret = hexVal.slice(1);
+
+            // Splitting each character
+            ret = ret.split('');
+
+            // Checking if the length is 3
+            // then make that 6
+            if (ret.length == 3) {
+                let ar = [];
+                ar.push(ret[0]);
+                ar.push(ret[0]);
+                ar.push(ret[1]);
+                ar.push(ret[1]);
+                ar.push(ret[2]);
+                ar.push(ret[2]);
+                ret = ar;
+            }
+
+            // Starts with '0x'(in hexadecimal)
+            ret = '0x' + ret.join('');
+
+            // Converting the first 2 characters
+            // from hexadecimal to r value
+            let r = (ret >> 16) & 255;
+
+            // Converting the second 2 characters
+            // to hexadecimal to g value
+            let g = (ret >> 8) & 255;
+
+            // Converting the last 2 characters
+            // to hexadecimal to b value
+            let b = ret & 255;
+
+            // Appending all of them to make
+            // the RGBA value
+            return 'rgba(' + [r, g, b].join(',') + ',1)';
+        }
+    }
+  // Function to convert RGBA to Hex
+  const rgbaToHex = (rgba) => {
+    const parts = rgba.match(/(\d+), (\d+), (\d+), (\d?\.?\d+)/);
+    const r = parseInt(parts[1]).toString(16).padStart(2, '0');
+    const g = parseInt(parts[2]).toString(16).padStart(2, '0');
+    const b = parseInt(parts[3]).toString(16).padStart(2, '0');
+    return `#${r}${g}${b}`;
+  };
 
 const getXCoord = (i, xSplit, Xsegment) => {
     //const currentRow = Math.floor(i / xSplit);
@@ -30,10 +85,10 @@ const getSubXCoord = (index, i , xSplit, Xsegment, subSplitX, subsegmentSizeX) =
     return childCol * subsegmentSizeX
 }
 
-const getSubYCoord = (index, i, xSplit, Ysegment, subSplitY, subsegmentSizeY) => {
+const getSubYCoord = (index, i, xSplit, Ysegment, subSplitX, subsegmentSizeY) => {
     const currentRow = Math.floor(index / xSplit);
     const parentYCoord = currentRow * Ysegment
-    const childRow = Math.floor(i / subSplitY);
+    const childRow = Math.floor(i / subSplitX);
     //return parentYCoord + (childRow * subsegmentSize)
     return childRow * subsegmentSizeY
 }
@@ -133,138 +188,56 @@ const getTileX = (i, horizontalSplit, verticalSplit) => {
         //parentYTile: parentYTile,
         return: currentSubParentRow * subTileHeight - subTileHeight
     }
-    console.log(obj)
+    //console.log(obj)
     return currentSubParentRow * subTileHeight - subTileHeight;
   };
 
-const Tiles = ({idsuffix, refContainer,  tiles, handleTileClick, xSplit, ySplit, xsegmentSize, ysegmentSize, selectedX, selectedY, clicked, color, clickedValue, clickedObject, clickedObjectValue, subObjectArray, subSplitX, subSplitY, subsegmentSizeX, subsegmentSizeY, canvasRef, zoomCanvasSize, selectedTilesArray}) => {
-    //console.log(typeof(tiles))
+const Tiles = ({idsuffix, refContainer,  tiles, handleTileClick, handleSubTileClick, xSplit, ySplit, xSegmentSize, ySegmentSize, selectedX, selectedY, clicked, clickedValue, clickedObject, clickedObjectValue, subSplitX, subSplitY, subsegmentSizeX, subsegmentSizeY, canvasRef, zoomCanvasSize, selectedTilesArray, selectedSubTilesArray}) => {
     //console.log(tiles)
-    //const tilesArray = Object.values(tiles)[0]
-    //console.log(typeof(subObjectArray));
-    //console.log(Object.keys(subObjectArray))
-    //console.log(Object.values(subObjectArray))
-    //console.log(Object.keys(subObjectArray));
-    //console.log(subObjectArray['1'].id);
-    //console.log(subObjectArray);
-    
-    function handleClick(e) {
-        //var id = e.target.id
-        //var count = id.split('-').length-1
-        
-        //if (count>0) {
-        //    id=id.split('-')[1]
-        //}
-        //console.log(id)
-        //id  = id.replace(idsuffix,'')
-        //id  = id.replace('-','')
-        
-        //index(Number(id))
-        var x = Number(e.currentTarget.getAttribute('dataset-xval'))
-        var y = Number(e.currentTarget.getAttribute('dataset-yval'))
-        selectedX(x)
-        selectedY(y)
-        
-        //clicked(!clickedValue)
-        color('')
-        clickedObject(clickedObjectValue)
-
-        if (canvasRef.current) {
-            let canvasMultiplierX = zoomCanvasSize / xsegmentSize
-            let canvasMultiplierY = zoomCanvasSize / ysegmentSize
-
-            const canvas = canvasRef.current;
-            const ctx = canvas.getContext('2d');
-            const img = new Image();
-            img.src = image;
-            img.onload = () => {
-                //ctx.clearRect(0, 0, canvas.width, canvas.height);
-                //ctx.drawImage(img, x, y, xsegmentSize, ysegmentSize, 0, 0, xsegmentSize*canvasMultiplierX, ysegmentSize*canvasMultiplierY);
-            }
-        }
-    }
     return (
         <>
-            
-            {tiles.map((v, i) => (
-                subObjectArray!=undefined && subObjectArray[i].value.length === 0 ?
-                    <div
+            {Object.entries(tiles).map((v, i) => (
+                tiles[i].subTiles.length===0 || typeof(tiles[i])==='string' ?
+                <div
+                    ref={refContainer}
                     key={i}
-                    className="tile "
+                    id={`${idsuffix}-${i}`}
+                    dataset-index={i}
+                    className={`absolute -top-[1px] -right-[1px] border-[#f3f3f39c] bottom-0 left-0 border-l border-b ${Math.floor(i / xSplit) === 0 ? 'border-t':'border-t-0'} `}
+                    //className={Math.floor(i / xSplit) === 0 ? 'border-t':'border-t-0'}
                     style={{
                         width: `${100 / xSplit}%`,
                         height: `${100 / ySplit}%`,
                         top: `${getTileX(i, xSplit, ySplit)}%`,
                         left: `${getTileY(i, xSplit)}%`,
-                        background: selectedTilesArray.includes(i) ? 'rgba(0, 0, 0, 0.2)' : 'none'
-                    }}>
-                    </div> : subObjectArray[i].value.map((c,x) => (
-                        <div
-                        id={`${idsuffix}-${i}-${x}`}
-                        key={x}
-                        className="subtile "
-                        style={{
-                            width: `${100 / xSplit / subSplitX}%`,
-                            height: `${100 / ySplit / subSplitY}%`,
-                            top: `${getSubTileX(i, x, xSplit, ySplit, subSplitX, subSplitY)}%`,
-                            left: `${getSubTileY(i, x,xSplit, subSplitX)}%`,
-                        }}>
-                    </div>
-                    ))
-            ))}
-            {tiles.map((v, i) => (
-                subObjectArray[i].value.length === 0 ?
-                <div
-                    key={i}
-                    id={`${idsuffix}-${i}`}
-                    className="tileBorder "
-                    style={{
-                    width: `${100 / xSplit}%`,
-                    height: `${100 / ySplit}%`,
-                    top: `${getTileX(i, xSplit, ySplit)}%`,
-                    left: `${getTileY(i, xSplit)}%`
+                        background: selectedTilesArray.includes(i) ? 'rgba(0, 0, 0, 0.4)' : 'none',
+                        
                     }}
-                >
-                    <div className="tileBorderContent "
-                        id={`${idsuffix}-${i}`}
-                        ref={refContainer}
+                    onClick={(e) => handleTileClick(e)}
+                    >
+                </div>
+                :
+                tiles[i].subTiles.map((c,x) => (
+                    <div
+                    id={`${idsuffix}-${i}-${x}`}
+                    dataset-parent={i}
 
-                        dataset-index={i}
-                        dataset-subindex={null}
-                        dataset-xval={getXCoord(i,xSplit,xsegmentSize)}
-                        dataset-yval={getYCoord(i,xSplit,ysegmentSize)}
-                        dataset-col={i % xSplit}
-                        dataset-row={Math.floor(i / xSplit)}
-
-                        onClick={(e) => handleTileClick(e)}
-                    ></div>
-                </div> : subObjectArray[i].value.map((c,x) => ( 
-                                     <div
-                                     key={x}
-                                     id={`${idsuffix}-${i}-${x}`}
-                                     className="subtileBorder "
-                                     style={{
-                                     width: `${100 / xSplit / subSplitX}%`,
-                                     height: `${100 / ySplit / subSplitY}%`,
-                                     top: `${getSubTileX(i, x, xSplit, ySplit, subSplitX, subSplitY)}%`,
-                                     left: `${getSubTileY(i, x, xSplit, subSplitX)}%`
-                                     
-                                     }}
-                                 >
-                                     <div className="subtileBorderContent "
-                                         id={`${idsuffix}-${i}-${x}`}
-                                         dataset-index={i}
-                                         dataset-subindex={x}
-                                         dataset-xval={getSubXCoord(i,x,xSplit,xsegmentSize, subSplitX, subsegmentSizeX)}
-                                         dataset-yval={getSubYCoord(i,x,ySplit,ysegmentSize, subSplitY, subsegmentSizeY)}
-                                         dataset-col={i % xSplit}
-                                         dataset-row={Math.floor(i / xSplit)}
-                                         onClick={(e) => handlTileClick(e)}
-
-                                     ></div>
-                                 </div>
+                    key={x}
+                    className={`absolute top-0 right-0 bottom-0 left-0 border-[#f3f3f39c] border-l border-b`}
+                    style={{
+                        width: `${100 / xSplit / subSplitX}%`,
+                        height: `${100 / ySplit / subSplitY}%`,
+                        top: `${getSubTileX(i, x, xSplit, ySplit, subSplitX, subSplitY)}%`,
+                        left: `${getSubTileY(i, x,xSplit, subSplitX)}%`,
+                        background: selectedTilesArray.includes(i) && selectedSubTilesArray.includes(x) ? 'rgba(0, 0, 0, 0.4)' : 'none'
+                    }}
+                    onClick={(e)=> handleSubTileClick(e)}
+                    >
+                </div>
                 ))
-            ))}
+            ))
+        }
+                
             
         </>
     )
@@ -294,34 +267,39 @@ export default function App() {
     const refContainer = useRef(null);
     const [selectedTilesArray, setSelectedTilesArray] = useState([]);
     const [selectedSubTilesArray, setSelectedSubTilesArray] = useState([]);
-
+    const [gradients, setGradients] = useState([]);
+    const [backgrounds, setBackgrounds] = useState([]);
+    const [activeGradient, setActiveGradient] = useState();
+    const [activeStop, setActiveStop] = useState({}); // State for the active stop
     const [selectedTiles, setSelectedTiles] = useState([]); // Updated to handle multiple selections
-    const [gradients, setGradients] = useState({});
     const [tileHeight, setTileHeight] = useState(0);
     const [tileWidth, setTileWidth] = useState(0);
-    
-    const [zoom, setZoom] = useState(10);
-    const [clicked, setClicked] = useState(false);
-    const [divClicked, setDivClicked] = useState({});
-    const [xsegmentSize, setXSegmentSize] = useState(0);
-    const [ysegmentSize, setYSegmentSize] = useState(0);
-    const [subsegmentSizeX, setSubSegmentSizeX] = useState(5);
-    const [subsegmentSizeY, setSubSegmentSizeY] = useState(5);
-    const [xSplit, setxSplit] = useState(10);
-    const [ySplit, setySplit] = useState(10);
-    // const [horizontalSubSplit, setHorizontalSubSplit] = useState(10);
-    // const [verticalSubSplit, setVerticalSubSplit] = useState(10);
-    const [overlap, setOverlap] = useState(0);
     const [img, setImg] = useState();
     const [imageHeight, setImageHeight] = useState(100)
     const [imageWidth, setImageWidth] = useState(100)
+    const [xSplit, setxSplit] = useState(10);
+    const [ySplit, setySplit] = useState(10);
+    const [stops, setStops] = useState([{ color: 'rgba(255, 255, 255, 1)', position_from: 0, position_to: null }, { color: 'rgba(0, 0, 0, 1)', position_from: 100, position_to: null }]);
+    const [zoom, setZoom] = useState(10);
+    const [clicked, setClicked] = useState(false);
+    const [divClicked, setDivClicked] = useState({});
+    const [xSegmentSize, setXSegmentSize] = useState(imageWidth / xSplit);
+    const [ySegmentSize, setYSegmentSize] = useState(imageHeight / ySplit);
+    const [subSplitX, setSubSplitX] = useState(5);
+    const [subSplitY, setSubSplitY] = useState(5);
+    const [subsegmentSizeX, setSubSegmentSizeX] = useState(xSegmentSize / subSplitX);
+    const [subsegmentSizeY, setSubSegmentSizeY] = useState(ySegmentSize / subSplitY);
+    // const [horizontalSubSplit, setHorizontalSubSplit] = useState(10);
+    // const [verticalSubSplit, setVerticalSubSplit] = useState(10);
+    const [overlap, setOverlap] = useState(0);
     const [color, setColor] = useState('');
+    const [background, setBackground] = useState('');
     //const degrees = 90//color ? parseInt(color?.split(',')[0]?.split('(')[1]) : 90
     // const [degrees, setDegrees] = useState(180);
 
     const [customPresets, setCustomPresets] = useState([]);
-    let initalArray = Array.from({ length: xSplit * ySplit });
-    const [dataArray, setDataArray] = useState(initalArray);
+    let initalDataArray = Array.from({ length: xSplit * ySplit });
+    const [dataArray, setDataArray] = useState(initalDataArray);
     const { gradientType, setLinear, setRadial, addPoint, deletePoint, degrees, setPointLeft, currentLeft, selectedPoint, setSelectedPoint, handleChange } = useColorPicker(color, setColor);
     const [selectedX, setSelectedX] = useState();
     const [selectedY, setSelectedY] = useState();
@@ -330,50 +308,50 @@ export default function App() {
     //const [index, setIndex] = useState(0);
     const [subIndex, setSubIndex] = useState();
     const [imageBuffer, setImageBuffer] = useState(0);
-    const [split, setSplit] = useState();
+    const [split, setSplit] = useState(false);
     const [splitParents, setSplitParents] = useState([]);
-    const [subSplitX, setSubSplitX] = useState(5);
-    const [subSplitY, setSubSplitY] = useState(5);
     const [zoomCanvasSize, setZoomCanvasSize] = useState(200);
     const [clickedObject, setClickedObject] = useState();
     const [zoomImage, setZoomImage] = useState();
     //const [segmentSize, setSegmentSize] = useState(5);
     //const [imageColumns, setImageColumns] = useState(0)
-    const aspectRatio = xsegmentSize / ysegmentSize
-    const tiles = Array.from({ length: xSplit * ySplit });
-    const subTiles = Array.from({ length: subSplitX * subSplitY });
-    const initalsubObjectArray = () => {
-        //let output = new Array(tiles.length).fill([]);
-        var newArray=[]
-        var newObj = {}
-        for (let index = 0; index < tiles.length; index++) {
-            newObj = {
-                id: index,
-                value: []
+    const aspectRatio = xSegmentSize / ySegmentSize
+    function initalTilesArray () {
+        let array = Array.from({ length: xSplit * ySplit });
+        for (let index = 0; index < array.length; index++) {
+            var element = array[index];
+            element = {
+                gradients: [],
+                subTiles: []
             }
-             newArray.push(newObj)
-         }
-        var output = newArray;
-        //console.log( (output) );
-        return output
-
-        // var keys = []
-        // var values = []
-        // for (let index = 0; index < tiles.length; index++) {
-        //     //keys.push(`${index}`)
-        //     //values.push([])
-
-        // }
-        // const keyValuePairs = keys.map((key, index) => [key, values[index]]);
-        // const object = Object.fromEntries(keyValuePairs);
-        // return object
+            array[index]=element
+            
+        }
+        return array
+    }
+    const [tiles, setTiles] = useState(initalTilesArray());
+    //const tiles = Array.from({ length: xSplit * ySplit });
+    function initalSubTilesArray () {
+        let array = Array.from({ length: subSplitX * subSplitY });
+        for (let index = 0; index < array.length; index++) {
+            var element = array[index];
+            element = {
+                gradients: []
+            }
+            array[index]=element
+            
+        }
+        return array
     }
 
-    const [subObjectArray, setSubObjectArray] = useState(initalsubObjectArray());
-    //const subObjectArray = initalsubObjectArray()
+    const subTiles = Array.from(initalSubTilesArray());
+
     const zoomImg = (newImage) => {
         //console.log(newImage)
         setZoomImage(newImage)
+    }
+    function handleBackgroundChange(val) {
+        setBackground(val)
     }
 
       function handleSelectedX(val) {
@@ -389,9 +367,129 @@ export default function App() {
       function handleColor(val) {
         setColor(val)
       }
+
       function handleClickedObject(val) {
         setClickedObject(val)
       }
+      function handleActiveStop(gradientIndex, stopIndex) {
+        //console.log('handleActiveStop')
+        setActiveStop({gradientIndex: gradientIndex, stopIndex: stopIndex})
+      }
+      function handleGradientsChange(index, key, val) {
+        const newTiles = [...tiles]
+        if (selectedTilesArray[0]!=undefined && selectedSubTilesArray[0]!=undefined) {
+            newTiles[selectedTilesArray[0]].subTiles[selectedSubTilesArray[0]].gradients[index][key] = val
+        } else if (selectedTilesArray[0]!=undefined) {
+            newTiles[selectedTilesArray[0]].gradients[index][key] = val
+        }
+        //const newGradients = [...tiles[selectedTilesArray].gradients]
+        //newGradients[index][key] = val
+        //newTiles[selectedTilesArray[0]].gradients = newGradients
+        //console.log(newGradients)
+        //setGradients(newGradients)
+        setTiles(()=>newTiles)
+    }
+
+    function handleGradientsStopChange (gradientindex, index, key, value) {
+        const newTiles = [...tiles]
+        if (selectedTilesArray[0]!=undefined && selectedSubTilesArray[0]!=undefined) {
+            newTiles[selectedTilesArray[0]].subTiles[selectedSubTilesArray[0]].gradients[gradientindex].stops[index][key] = value
+        } else if (selectedTilesArray[0]!=undefined) {
+            newTiles[selectedTilesArray[0]].gradients[gradientindex].stops[index][key] = value
+        }
+        //const newGradients = [...tiles[selectedTilesArray].gradients]
+        //console.log(gradients[gradientindex].stops)
+        console.log(newTiles)
+        //newGradients[gradientindex].stops[index][key] = value;
+        //setGradients(newGradients);
+        //newTiles[selectedTilesArray[0]].gradients = newGradients
+        setTiles(()=>newTiles)
+      };
+
+    function handleAddStop (gradientindex, position) {
+        const newTiles = [...tiles]
+        if (selectedTilesArray[0]!=undefined && selectedSubTilesArray[0]!=undefined) {
+            const newGradients = [...newTiles[selectedTilesArray[0]].subTiles[selectedSubTilesArray[0]].gradients]
+            const newStops = [...newGradients[gradientindex].stops, { color: 'rgba(255, 255, 255, 1)', position_from: position, position_to: null }];
+            newGradients[gradientindex].stops = newStops.sort((a, b) => a.position_from - b.position_from)
+            newTiles[selectedTilesArray[0]].subTiles[selectedSubTilesArray[0]].gradients = newGradients
+        } else if (selectedTilesArray[0]!=undefined) {
+            const newGradients = [...newTiles[selectedTilesArray[0]].gradients]
+            const newStops = [...newGradients[gradientindex].stops, { color: 'rgba(255, 255, 255, 1)', position_from: position, position_to: null }];
+            newGradients[gradientindex].stops = newStops.sort((a, b) => a.position_from - b.position_from)
+            newTiles[selectedTilesArray[0]].gradients = newGradients
+        }
+        //setStops(newStops.sort((a, b) => a.position_from - b.position_from)); // Sort stops by position
+        //setGradients(newGradients)
+        
+        setTiles(()=>newTiles)
+    };
+    function handleRemoveStop (gradientindex, index) {
+        const newTiles = [...tiles]
+        if (selectedTilesArray[0]!=undefined && selectedSubTilesArray[0]!=undefined) {
+            var newStops = newTiles[selectedTilesArray[0]].subTiles[selectedSubTilesArray[0]].gradients[gradientindex].stops.filter((_, i) => i !== index);
+            newStops = newStops.sort(function (a, b) {
+                if (a.position_from < b.position_from) return -1
+                if (a.position_from > b.position_from) return 1
+                if (a.position_to < b.position_to) return -1
+                if (a.position_to > b.position_to) return 1
+    
+                } ); // Sort stops by position
+            newTiles[selectedTilesArray[0]].subTiles[selectedSubTilesArray[0]].gradients[gradientindex].stops = newStops
+        } else if (selectedTilesArray[0]!=undefined ) {
+            var newStops = newTiles[selectedTilesArray[0]].gradients[gradientindex].stops.filter((_, i) => i !== index);
+            newStops = newStops.sort(function (a, b) {
+                if (a.position_from < b.position_from) return -1
+                if (a.position_from > b.position_from) return 1
+                if (a.position_to < b.position_to) return -1
+                if (a.position_to > b.position_to) return 1
+    
+                } ); // Sort stops by position
+            newTiles[selectedTilesArray[0]].gradients[gradientindex].stops = newStops
+        }
+        setTiles(()=>newTiles)
+      };
+      function handleStopBlur (gradientindex) {
+        //console.log('blur')
+        const newTiles = [...tiles]
+        if (selectedTilesArray[0]!=undefined && selectedSubTilesArray[0]!=undefined) {
+            var newStops = newTiles[selectedTilesArray[0]].subTiles[selectedSubTilesArray[0]].gradients[gradientindex].stops
+            newStops = newStops.sort(function (a,b) {
+                if (a.position_from < b.position_from) return -1
+                if (a.position_from > b.position_from) return 1
+                if (a.position_to < b.position_to) return -1
+                if (a.position_to > b.position_to) return 1
+            })
+            newTiles[selectedTilesArray[0]].subTiles[selectedSubTilesArray[0]].gradients[gradientindex].stops = newStops
+        } else if (selectedTilesArray[0]!=undefined) {
+            var newStops = newTiles[selectedTilesArray[0]].gradients[gradientindex].stops
+            newStops = newStops.sort(function (a,b) {
+                if (a.position_from < b.position_from) return -1
+                if (a.position_from > b.position_from) return 1
+                if (a.position_to < b.position_to) return -1
+                if (a.position_to > b.position_to) return 1
+            })
+            //console.log(newStops)
+            newTiles[selectedTilesArray[0]].gradients[gradientindex].stops = newStops
+        }
+        setTiles(()=>newTiles)
+      };
+
+    function handleAddGradient() {
+        var newTiles = [...tiles]
+        if (selectedTilesArray[0]!=undefined && selectedSubTilesArray[0]!=undefined) {
+            newTiles[selectedTilesArray[0]].subTiles[selectedSubTilesArray[0]].gradients.push({ visible: true, gradientType: 'linear', radialShape: '', angle: 90, xposition: 50, yposition: 50, stops: [{color: 'rgba(255, 255, 255, 1)', position_from: 0, position_to: null }, { color: 'rgba(0, 0, 0, 1)', position_from: 100, position_to: null }]})
+            setActiveGradient(newTiles[selectedTilesArray[0]].subTiles[selectedSubTilesArray[0]].gradients.length-1)
+            //console.log(newTiles)
+        } else if (selectedTilesArray[0]!=undefined) {
+            newTiles[selectedTilesArray[0]].gradients.push({ visible: true, gradientType: 'linear', radialShape: '', angle: 90, xposition: 50, yposition: 50, stops: [{color: 'rgba(255, 255, 255, 1)', position_from: 0, position_to: null }, { color: 'rgba(0, 0, 0, 1)', position_from: 100, position_to: null }]})
+            setActiveGradient(newTiles[selectedTilesArray[0]].gradients.length-1)
+            
+        }
+        //console.log(newTiles)
+        setTiles(() => newTiles)
+    }
+
     function UpdateDataArray () {
         // var newDataArray = []
         // for (let index = 0; index < dataArray.length; index++) {
@@ -412,38 +510,28 @@ export default function App() {
             if (i === selectedTilesArray[0]) {
                 //console.log('here')
               // Increment the clicked counter
-              return color;
+              return background;
             } else {
               // The rest haven't changed
               return c;
             }
           });
         //console.log(newDataArray)
-        debugger
-        if (selectedTilesArray.length ===1 && selectedSubTilesArray.length === 1) {
-            var newSubDataArray = {...subObjectArray}
-            //console.log('UpdateDataArray :subObjectArray:' + JSON.stringify(subObjectArray))
-            //console.log('UpdateDataArray :selectedTile:' + newSubDataArray[selectedTilesArray[0]].value)
-            var tempObj = newSubDataArray[selectedTilesArray[0]].value
-            //console.log(tempObj.length)
-            var emptyArray = []
-            for (let index = 0; index < tempObj.length; index++) {
-                let c = null
-                if (index === selectedSubTilesArray[0]) {
-                    c = color
-                }
-                emptyArray.push(c)
-                
-            }
+
+        var newTiles = [...tiles]
+        if (selectedTilesArray[0] !=undefined && selectedSubTilesArray[0] !=undefined) {
+            newTiles[selectedTilesArray[0]].subTiles = subTiles
+            //newTiles[selectedTilesArray[0]].subTiles[selectedSubTilesArray[0]] = visibleBackgrounds()
+            //console.log('[0][0]' + newTiles[selectedTilesArray[0]][0])
+
+            //console.log('UpdateDataArray:' + newTiles[selectedTilesArray[0][selectedSubTilesArray[0]]])
+        } else if (selectedTilesArray[0] !=undefined && selectedSubTilesArray[0] ===undefined) {
             
-            //console.log('UpdateDataArray tempObj:' + JSON.stringify(tempObj))
-            //console.log('UpdateDataArray emptyObj:' + JSON.stringify(emptyArray))
-            //console.log('UpdateDataArray typeof:' + typeof(newSubDataArray[selectedTilesArray[0]].value))
-            newSubDataArray[selectedTilesArray[0]].value = emptyArray
-            setSubObjectArray(newSubDataArray)
+            //newTiles[selectedTilesArray[0]] = visibleBackgrounds()
         }
-        
-        setDataArray(newDataArray)
+        setTiles(newTiles)
+        //console.log(newTiles)
+        //setDataArray(newDataArray)
 
     }
     function UpdateDBTable () {
@@ -474,8 +562,8 @@ export default function App() {
             console.error('Error with POST request:', error);
         });
     }
-    //const X = arrayRange(0, imageWidth, xsegmentSize)
-    //const Y = arrayRange(0, imageHeight, ysegmentSize)
+    //const X = arrayRange(0, imageWidth, xSegmentSize)
+    //const Y = arrayRange(0, imageHeight, ySegmentSize)
     // const arrayRange = (start, stop, step) =>
     //     Array.from(
     //     { length: (stop - start) / step + 1 },
@@ -492,6 +580,16 @@ export default function App() {
     //     }
 
     // }
+    const handleSubTileClick = (e) => {
+        if (!e.shiftKey) {
+            let parentIndex = Number(e.currentTarget.getAttribute('dataset-parent'))
+            if (parentIndex!=selectedTilesArray[0]) {
+                setSelectedSubTilesArray(()=>[])
+                setSelectedTilesArray(()=>[parentIndex])
+                setSplit(true)
+            }
+        }
+    }
     const handleTileClick = (e) => {
         
         
@@ -507,10 +605,15 @@ export default function App() {
         //     }
         // } else 
         if (!e.shiftKey) {
-            
             let currentIndex = Number(e.currentTarget.getAttribute('dataset-index'))
-            //console.log('Current index: ' + currentIndex)
-            setSelectedTilesArray([currentIndex]);
+            if (currentIndex!=selectedTilesArray[0]) {
+                setSelectedSubTilesArray(()=>[])
+                setSelectedTilesArray(() => [currentIndex]);
+                setSplit(false)
+                //console.log(selectedTilesArray[0])
+                //console.log(selectedSubTilesArray[0])
+                //console.log(tiles)
+            }
 
             // if (currentIndex!=index) {
             //     //setSplit(false)
@@ -579,7 +682,6 @@ export default function App() {
             //     }
             // }
         }
-        //console.log(subObjectArray)
     };
     const drawSubImageSegment = () => {
         if (canvasRef.current && image && selectedSubTilesArray.length === 1) {
@@ -588,22 +690,29 @@ export default function App() {
             const img = new Image();
             img.src = image;
             img.onload = () => {
-                let xcoord = getXCoord(selectedTilesArray[0],xSplit,xsegmentSize)
-                let ycoord = getYCoord(selectedTilesArray[0],xSplit,ysegmentSize)
-                let xsubcoord = getSubXCoord(selectedTilesArray[0],selectedSubTilesArray[0],xSplit,xsegmentSize,subSplitX,subsegmentSizeX)
-                let ysubcoord = getSubYCoord(selectedTilesArray[0],selectedSubTilesArray[0],ySplit,ysegmentSize,subSplitY,subsegmentSizeY)
+                let xcoord = getXCoord(selectedTilesArray[0],xSplit,xSegmentSize)
+                let ycoord = getYCoord(selectedTilesArray[0],xSplit,ySegmentSize)
+                let xsubcoord = getSubXCoord(selectedTilesArray[0],selectedSubTilesArray[0],xSplit,xSegmentSize,subSplitX,subsegmentSizeX)
+                let ysubcoord = getSubYCoord(selectedTilesArray[0],selectedSubTilesArray[0],xSplit,ySegmentSize,subSplitX,subsegmentSizeY)
 
                 let obj = {
-                    subxcoord: getSubXCoord(selectedTilesArray[0],selectedSubTilesArray[0],xSplit,xsegmentSize,subSplitX,subsegmentSizeX),
-                    subycoord: getSubYCoord(selectedTilesArray[0],selectedSubTilesArray[0],ySplit,ysegmentSize,subSplitY,subsegmentSizeY),
+                    xcoord: xcoord,
+                    ycoord: ycoord,
+                    subxcoord: xsubcoord,
+                    subycoord: ysubcoord,
+                    subsegmentSizeX: subsegmentSizeX,
+                    subsegmentSizeY: subsegmentSizeY,
+                    subSplitX: subSplitX,
+                    subSplitY: subSplitY
+
+
                 }
-                console.log(obj)
+                //console.log(obj)
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
                 ctx.drawImage(img,
                     xcoord + xsubcoord, 
                     ycoord + ysubcoord,
-                    subsegmentSizeX, subsegmentSizeY, 0, 0, canvas.width, canvas.height);
-
+                    subsegmentSizeX, subsegmentSizeY, 0, 0, canvas.width, canvas.height)
             }
         }
     }
@@ -622,21 +731,22 @@ export default function App() {
             img.onload = () => {
 
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
-                let canvasMultiplierX = (zoomCanvasSize*aspectRatio) / xsegmentSize
-                let canvasMultiplierY = zoomCanvasSize / ysegmentSize
+                let canvasMultiplierX = (zoomCanvasSize*aspectRatio) / xSegmentSize
+                let canvasMultiplierY = zoomCanvasSize / ySegmentSize
                 var obj = {
                     canvasMultiplierX: canvasMultiplierX,
                     canvasMultiplierY: canvasMultiplierY,
-                    xsegmentSize: xsegmentSize,
-                    ysegmentSize: ysegmentSize,
+                    xSegmentSize: xSegmentSize,
+                    ySegmentSize: ySegmentSize,
                     canvasHeight: canvas.height,
                     canvasWidth: canvas.width,
-                    tileX: getXCoord(indices[0],xSplit,xsegmentSize),
-                    tileY: getYCoord(indices[0],xSplit,ysegmentSize),
-
+                    tileX: getXCoord(indices[0],xSplit,xSegmentSize),
+                    tileY: getYCoord(indices[0],xSplit,ySegmentSize),
+                    xSplit: xSplit,
+                    ySplit: ySplit,
                 }
                 //console.log(obj);
-                ctx.drawImage(img, getXCoord(indices[0],xSplit,xsegmentSize), getYCoord(indices[0],xSplit,ysegmentSize), xsegmentSize, ysegmentSize, 0, 0, canvas.width, canvas.height);
+                ctx.drawImage(img, getXCoord(indices[0],xSplit,xSegmentSize), getYCoord(indices[0],xSplit,ySegmentSize), xSegmentSize, ySegmentSize, 0, 0, canvas.width, canvas.height);
                 if (indices.length === 1) {
                     // if (subIndex != undefined && split) {
                     //     console.log('Split')
@@ -647,8 +757,8 @@ export default function App() {
 
                 } else if (indices.length > 1) {
                     indices.forEach( (item) => {
-                        // const x = (item.index % xSplit) * xsegmentSize;
-                        // const y = Math.floor(item.index / xSplit) * ysegmentSize;
+                        // const x = (item.index % xSplit) * xSegmentSize;
+                        // const y = Math.floor(item.index / xSplit) * ySegmentSize;
                         // if (i>0) {
                         //     //col = index % xSplit > col ? col++ : col
                         //     if (item.index % xSplit > col) {
@@ -659,15 +769,15 @@ export default function App() {
                         //     }
                         //     //const col = Math.floor(x / tileWidth);
                         //     //const row = Math.floor(y / tileHeight);
-                        //     destX = col * xsegmentSize * zoom
-                        //     destY = row * ysegmentSize * zoom
+                        //     destX = col * xSegmentSize * zoom
+                        //     destY = row * ySegmentSize * zoom
                         //     var obj = {index: item.index, x: x, y: y, destX: destX, destY: destY, row: item.row, col: item.col}
                         //     console.log(obj)
-                        //     ctx.drawImage(img, x, y, xsegmentSize, ysegmentSize, destX, destY, xsegmentSize * zoom, ysegmentSize * zoom);
+                        //     ctx.drawImage(img, x, y, xSegmentSize, ySegmentSize, destX, destY, xSegmentSize * zoom, ySegmentSize * zoom);
 
                         // } else {
 
-                            // ctx.drawImage(img, x, y, xsegmentSize, ysegmentSize, destX, destY, xsegmentSize * zoom, ysegmentSize * zoom);
+                            // ctx.drawImage(img, x, y, xSegmentSize, ySegmentSize, destX, destY, xSegmentSize * zoom, ySegmentSize * zoom);
                         // }
                         i++
                     });
@@ -687,7 +797,10 @@ export default function App() {
             const imageData = ctx.getImageData(x, y, 1, 1).data;
             const pickedColor = `rgba(${imageData[0]}, ${imageData[1]}, ${imageData[2]}, ${imageData[3] / 255})`;
             //console.log(color)
-            handleChange(pickedColor)
+            
+            if (activeStop!=null && activeStop!=undefined && activeGradient!=undefined) {
+                handleGradientsStopChange(activeGradient, activeStop.stopIndex, 'color', pickedColor)
+            }
         }
     };
 
@@ -703,51 +816,76 @@ export default function App() {
         // setSelectedSubY(y)
         // drawImageSegment(selectedTiles)
         // //setClicked(!clicked)
-
     }
-    function handleClick(e) {
-        setClickedObject('canvas')
-        var idx = parseInt(e.currentTarget.id)
-        setIndex(idx)
-        var x = Number(e.currentTarget.getAttribute('dataset-xval'))
-        var y = Number(e.currentTarget.getAttribute('dataset-yval'))
-        setSelectedX(x)
-        setSelectedY(y)
-        
-        var obj = {
-            img: image,
-            x: x,
-            y: y,
-            xseg: xsegmentSize,
-            yseg: ysegmentSize
-        }
-        setSplit(false)
-        setClicked(!clicked)
-        setColor('')
 
-    }
     function handleClearSplit() {
         setSelectedSubTilesArray([])
         if (selectedTilesArray[0]!=undefined) {
-            var newSubObjectArray = {...subObjectArray}
-            newSubObjectArray[selectedTilesArray[0]].value = []
+            var newTiles = [...tiles]
+            newTiles[selectedTilesArray[0]].subTiles = []
 
-            setSubObjectArray(newSubObjectArray)
+            setTiles(newTiles)
             setSplit(false)
         }
     }
     function handleSplit(e) {
         if (e.target.checked) {
             if (selectedTilesArray[0]!=undefined) {
-                var newSubObjectArray = {...subObjectArray}
-                newSubObjectArray[selectedTilesArray[0]].value = subTiles
+                var newTiles = [...tiles]
+                newTiles[selectedTilesArray[0]].subTiles = subTiles
     
-                setSubObjectArray(newSubObjectArray)
+                setTiles(newTiles)
                 setSplit(true)
             }
         } else {
             handleClearSplit()
         }
+
+    }
+    function handleActiveGradient(val) {
+        setActiveGradient(val)
+    }
+    function visibleBackgrounds (from,item) {
+        let visiblebackgrounds = []
+        //console.log(tiles)
+        if (item==undefined){
+            console.log(from)
+            return 'none'
+        }
+            item.forEach(function (item) {
+                if (item.visible) {
+                    let l_gradient = null
+                    l_gradient = item.gradientType + '-gradient('
+            
+                    switch (item.gradientType) {
+                        case 'linear':
+                            l_gradient = l_gradient + item.angle + 'deg, '
+                            break
+                        case 'radial':
+                            l_gradient = l_gradient + item.radialShape + item.xposition + '% ' + item.yposition + '%,' 
+                            break
+                        case 'conic':
+                            l_gradient = l_gradient + 'from ' + item.angle + 'deg at '  + item.xposition + '% ' + item.yposition + '%,'
+                            break
+                    }
+                    for (let index = 0; index < item.stops.length; index++) {
+                        //let rgbColor = convertHexToRgbA(item.stops[index].color)
+                        let rgbColor = item.stops[index].color
+                        l_gradient =l_gradient + ' ' + rgbColor + ' ' + item.stops[index].position_from + '%'
+                        if (item.stops[index].position_to != null) {
+                            l_gradient = l_gradient + ' ' + item.stops[index].position_to + '%'
+                        }
+                        if (index < item.stops.length-1) {
+                            l_gradient = l_gradient + ','
+                        } else if (index === item.stops.length-1) {
+                            l_gradient = l_gradient + ')'
+                        }
+                    }
+                    visiblebackgrounds.push(l_gradient)
+                }
+            })
+        
+        return visiblebackgrounds.toString()
 
     }
 
@@ -763,53 +901,33 @@ export default function App() {
         
         },[])
         useEffect(() => {
-            //console.log("Horizontal changed to", xSplit);
-            //console.log("Vertical changed to", ySplit);
-            //console.log('Set Segment Size: useEffect 2')
-            //console.log(imageWidth)
-            //console.log(xSplit)
+            setSplit(false)
+            setSelectedTilesArray([])
+            setSelectedSubTilesArray([])
             setXSegmentSize(imageWidth / xSplit)
             setYSegmentSize(imageHeight / ySplit)
+                //UpdateDataArray()
+            setTiles(initalTilesArray)
 
-            },[xSplit, ySplit, xsegmentSize, ysegmentSize, imageHeight, imageWidth])
+        },[xSplit, ySplit, imageHeight, imageWidth])
+
         useEffect(() => {
-            UpdateDataArray()
-            //console.log(subObjectArray)
+
+            //UpdateDataArray()
             //console.log('useEffect Update color')
-        },[color])
+        },[background,backgrounds])
 
         useEffect(() => { 
-            // if (index != undefined && split===true) {
-            //     console.log(subTiles)
-            // }
-            //console.log('useEffect Update setSubObjectArray')
-            
-            setSubSegmentSizeX(xsegmentSize / subSplitX)
-            setSubSegmentSizeY(ysegmentSize  / subSplitY)
-            //handlesubObjectArray()
 
-            // var object = initalsubObjectArray()
+            setSubSegmentSizeX(xSegmentSize / subSplitX)
+            setSubSegmentSizeY(ySegmentSize  / subSplitY)
 
-            // for (let idx = 0; idx < subObjectArray.length; idx++) {
-            //     if (idx != selectedTilesArray[0] ){
-            //         object[idx].value = subObjectArray[idx].value
-            //     }
-            // }
+             if (split === true && selectedTilesArray[0]!=undefined) {
+                var newTiles = [...tiles]
+                newTiles[selectedTilesArray[0]].subTiles = subTiles
+                setTiles(() => newTiles)
+             }
 
-            // //console.log(object)
-            // if (split === true && selectedTilesArray[0]!=undefined) {
-            //     object[selectedTilesArray[0]].value = subTiles
-            //     //console.log(subSplitY)
-            //     //console.log(subTiles)
-            //     //console.log(object)
-            // } 
-            // //else if (split === false && selectedTilesArray[0]!=undefined && selectedSubTilesArray.length === 0) {
-            // //    object[selectedTilesArray[0]].value = []
-            //  //   setSubIndex(null)
-            // //}
-            // console.log('useeffect split:' + JSON.stringify(object))
-            // setSubObjectArray(object)
-            //console.log(subObjectArray)
         },[split, subSplitX, subSplitY])
 
          useEffect(() => {
@@ -821,10 +939,12 @@ export default function App() {
 
          },[refContainer])
          useEffect(() => {
-            setSplit(false)
-            setSelectedSubTilesArray([])
+            //setSplit(false)
+            //setSelectedSubTilesArray([])
             //console.log('Selected Tiles Array - draw Image Segment')
             drawImageSegment(selectedTilesArray)
+            //UpdateDataArray()
+            //setGradients(GradientFromBackgrounds)
 
          },[selectedTilesArray])
          useEffect(() => {
@@ -837,7 +957,6 @@ export default function App() {
                 drawImageSegment(selectedTilesArray)
                 
             }
-            console.log(subObjectArray)
 
          },[selectedSubTilesArray])
     return (
@@ -885,19 +1004,19 @@ export default function App() {
             </div>
     
             <div className="input">
-              <label htmlFor="xsegmentSize">X Segment Size</label>
+              <label htmlFor="xSegmentSize">X Segment Size</label>
               <input
                 type="number"
-                id="xsegmentSize"
-                value={xsegmentSize}
+                id="xSegmentSize"
+                value={xSegmentSize}
               />
             </div>
             <div className="input">
-              <label htmlFor="ysegmentSize">Y Segment Size</label>
+              <label htmlFor="ySegmentSize">Y Segment Size</label>
               <input
                 type="number"
-                id="ysegmentSize"
-                value={ysegmentSize}
+                id="ySegmentSize"
+                value={ySegmentSize}
               />
             </div>
     
@@ -956,13 +1075,12 @@ export default function App() {
                     >Clear</button>
                 </div>
             </div>
-            <div>{color}</div>
-            <div className="grid border border-blue-800 grid-flow-col grid-rows-3 gap-4">
-                <div className="border row-span-3">
-                    <div>
-                        <div className="flex flex-row">
-                            <div className={`h-[${zoomCanvasSize}px] w-[${zoomCanvasSize*aspectRatio}px] relative`}>
-                                <div className="inline-block  ">
+
+
+            <div className="grid grid-cols-5 grid-rows-5 gap-4 border">
+                <div className="col-span-2 row-span-3 border">
+                    <div className={`h-[${zoomCanvasSize}px] w-[${zoomCanvasSize*aspectRatio}px] relative`}>
+                            <div className="inline-block  ">
                                 <Canvas 
                                     className="imageWrapper2XX inline-block absolute" 
                                     canvasRef={canvasRef}
@@ -972,12 +1090,11 @@ export default function App() {
                                     //clicked={clicked} 
                                     stateChanger={zoomImg} 
                                     handleCanvasClick={handleCanvasClick} />
-                                            {subObjectArray[selectedTilesArray[0]] != undefined &&
-                                                subObjectArray[selectedTilesArray[0]].value.map((t, i) => (
+                                            {selectedTilesArray.length > 0 ? 
+                                                tiles[selectedTilesArray[0]].subTiles.map((t, i) => (
                                                     selectedTilesArray[0] !=undefined && split === true ?
                                                         <div
                                                             key={i}
-                                                            // id={`id-${Math.round(getXCoord(i,xSplit,xsegmentSize))}-${getYCoord(i,xSplit,ysegmentSize)}`}
                                                             className="tile2XX absolute inline-block "
                                                             style={{
                                                             width: `${100 / subSplitX}%`,
@@ -988,10 +1105,11 @@ export default function App() {
                                                         >
                                                         </div> : null
                                                     
-                                                ))
+                                                )): null
                                             }
-                                            {subObjectArray[selectedTilesArray[0]] != undefined &&
-                                                subObjectArray[selectedTilesArray[0]].value.map((t, i) => (
+                                            {selectedTilesArray.length > 0 ? 
+                                            
+                                                tiles[selectedTilesArray[0]].subTiles.map((t, i) => (
                                                     selectedTilesArray[0] !=undefined && split === true ?
                                                         <div
                                                         key={i}
@@ -1006,87 +1124,51 @@ export default function App() {
                                                         <div className="tileBorderContentxx absolute -top-[1px] -right-[1px] border bottom-0 left-0 border-[#ffffff18]"
                                                             dataset-index={selectedTilesArray[0]}
                                                             dataset-subindex={i}
-                                                            dataset-xval={getSubXCoord(selectedTilesArray[0],i, xSplit,xsegmentSize,subSplitX,subsegmentSizeX)}
-                                                            dataset-yval={getSubYCoord(selectedTilesArray[0],i, ySplit,ysegmentSize,subSplitX,subsegmentSizeY)}
+                                                            dataset-xval={getSubXCoord(selectedTilesArray[0],i, xSplit,xSegmentSize,subSplitX,subsegmentSizeX)}
+                                                            dataset-yval={getSubYCoord(selectedTilesArray[0],i, ySplit,ySegmentSize,subSplitX,subsegmentSizeY)}
                                                             onClick={(e) => handleZoomClick(e)}
                                                         ></div>
                                                     </div> : null
                                                     
-                                                ))
+                                                )): null
                                             }
-    
-                    
-                                </div>
-    
-                            </div>
-                            <div>
-                                    <div
-                                    className=""
-                                    style={{
-                                    background: color,
-                                    height: `${zoomCanvasSize}px`,
-                                    width: `${zoomCanvasSize * aspectRatio}px`
-                                }}
-                                ></div>
-                            
                             </div>
                         </div>
-                    </div>
-                    <div>
-                    B
-                        {/* <input type="number" value={degrees} onChange={handleDegrees} /> */}
-                        <ColorPicker value={color} onChange={setColor} height={100} width={290} hideColorTypeBtns={false} presets={customPresets} />
-                    </div>
+                        <div
+                            style={{
+                                background: 
+                                    selectedTilesArray[0]!=undefined && selectedSubTilesArray[0]!=undefined 
+                                    ?
+                                    tiles[selectedTilesArray[0]].subTiles[selectedSubTilesArray[0]]!=undefined ?
+                                         `${visibleBackgrounds('builderdisplay1',tiles[selectedTilesArray[0]].subTiles[selectedSubTilesArray[0]].gradients)}`
+                                     :null :
+                                      selectedTilesArray[0]!=undefined ? 
+                                      `${visibleBackgrounds('builderdisplay2',tiles[selectedTilesArray[0]].gradients)}` 
+                                    : null,
+                                height: `${zoomCanvasSize}px`,
+                                width: `${Number.parseInt(zoomCanvasSize*aspectRatio)}px`,
+                            }}
+                        >
+                        {/* {visibleBackgrounds()} */}
+                        </div>
+                        <GradientBuilder
+                            gradients={selectedTilesArray[0]!=undefined && selectedSubTilesArray[0]!=undefined ? tiles[selectedTilesArray[0]].subTiles[selectedSubTilesArray[0]].gradients : selectedTilesArray[0]!=undefined ? tiles[selectedTilesArray[0]].gradients : []}
+                            handleGradientsChange={handleGradientsChange}
+                            handleAddGradient={handleAddGradient}
+                            handleGradientsStopChange={handleGradientsStopChange}
+                            handleAddStop={handleAddStop}
+                            handleRemoveStop={handleRemoveStop}
+                            handleStopBlur={handleStopBlur}
+                            activeStop={activeStop}
+                            handleActiveStop={handleActiveStop}
+                            activeGradient={activeGradient}
+                            handleActiveGradient={handleActiveGradient}
+                            height={zoomCanvasSize}
+                            width={zoomCanvasSize*aspectRatio}
+                        ></GradientBuilder>
                 </div>
-    
-                <div className="col-span-4">D
-                    <div className="imageWrapper">
-                         <TransformWrapper
-                            initialScale={1}
-                            initialPositionX={200}
-                            initialPositionY={100}> 
-                            {({ zoomIn, zoomOut, resetTransform, ...rest }) => ( 
-                                <> 
-                                <Controls />
-                                <TransformComponent> 
-                                    <img className="image" src={image} alt="" />
-                                    <Tiles 
-                                        idsuffix={'t1'}
-                                        tiles={tiles}
-                                        subObjectArray={subObjectArray}
-                                        xSplit={xSplit}
-                                        ySplit={ySplit}
-                                        xsegmentSize={xsegmentSize}
-                                        ysegmentSize={ysegmentSize}
-                                        selectedX={handleSelectedX}
-                                        selectedY={handleSelectedY}
-                                        clicked={handleClicked}
-                                        color={handleColor}
-                                        clickedValue={clicked}
-                                        clickedObject={handleClickedObject}
-                                        clickedObjectValue={'canvas'}
-                                        subSplitX={subSplitX}
-                                        subSplitY={subSplitY}
-                                        subsegmentSizeX={subsegmentSizeX}
-                                        subsegmentSizeY={subsegmentSizeY}
-                                        canvasRef={canvasRef}
-                                        zoomCanvasSize={zoomCanvasSize}
-                                        handleTileClick={handleTileClick}
-                                        refContainer={refContainer}
-                                        selectedTilesArray={selectedTilesArray}
-                                        
-                                        ></Tiles>
-                                 </TransformComponent> 
-                                </>
-                             )}
-                        </TransformWrapper>
-                        
-                    </div>
-    
-                    <div className="col-span-4">
-                    E
-                        <div>
-                            <div className="imageWrapper2XX inline-block overflow-hidden absolute">
+                <div className="col-span-3 row-span-3 col-start-3 border">
+                <div className="imageWrapperx w-full ">
                             <TransformWrapper
                                 initialScale={1}
                                 initialPositionX={200}
@@ -1095,114 +1177,111 @@ export default function App() {
                                     <>
                                     <Controls />
                                     <TransformComponent> 
+                                        <img className="image" src={image} alt="" />
+                                        <Tiles 
+                                            idsuffix={'t1'}
+                                            tiles={tiles}
+                                            xSplit={xSplit}
+                                            ySplit={ySplit}
+                                            xSegmentSize={xSegmentSize}
+                                            ySegmentSize={ySegmentSize}
+                                            selectedX={handleSelectedX}
+                                            selectedY={handleSelectedY}
+                                            clicked={handleClicked}
+                                            clickedValue={clicked}
+                                            clickedObject={handleClickedObject}
+                                            clickedObjectValue={'canvas'}
+                                            subSplitX={subSplitX}
+                                            subSplitY={subSplitY}
+                                            subsegmentSizeX={subsegmentSizeX}
+                                            subsegmentSizeY={subsegmentSizeY}
+                                            canvasRef={canvasRef}
+                                            zoomCanvasSize={zoomCanvasSize}
+                                            handleTileClick={handleTileClick}
+                                            refContainer={refContainer}
+                                            selectedTilesArray={selectedTilesArray}
+                                            selectedSubTilesArray={selectedSubTilesArray}
+                                            handleSubTileClick={handleSubTileClick}
+                                            
+                                            ></Tiles>
+                                    </TransformComponent> 
+                                    </>
+                                )}
+                            </TransformWrapper>
+                        </div>
+                        <div className="imageWrapper2XX inline-block overflow-hidden absolute">
+                                <TransformWrapper
+                                    initialScale={1}
+                                    initialPositionX={200}
+                                    initialPositionY={100}> 
+                                    {({ zoomIn, zoomOut, resetTransform, ...rest }) => ( 
+                                        <>
+                                        <Controls />
+                                        <TransformComponent>
                                         <div 
-                                            className="inline-block"
+                                            className="inline-block placeholder"
+                                            dataset-xsplit={xSplit}
                                             style={{
-                                                //height: `${Number(imageHeight) + Number(xSplit)}px`,
-                                                //width: `${Number(imageWidth) + Number(ySplit)}px`
                                                 width: `${tileWidth*xSplit}px`,
                                                 height: `${tileHeight*ySplit}px`
-                                                //height: `${100}%`,
-                                                //width: `${100}%`,
-                                                //width: `${Number(imageWidth)}px`
                                             }}
                                         ></div>
-                                        {/* <img className="imag2" height={imageHeight} width={imageWidth}  alt="" /> */}
-                                        {tiles.map((t, i) => (
-                                            subObjectArray!=undefined && subObjectArray[i].value.length === 0 ?
+                                        {Object.entries(tiles).map((v, i) => (
+                                            
+                                            tiles[i].subTiles.length===0 ?
                                             <div
                                                 key={i}
-                                                // id={`id-${Math.round(getXCoord(i,xSplit,xsegmentSize))}-${getYCoord(i,xSplit,ysegmentSize)}`}
-                                                
-                                                className="tile2XX absolute inline-block "
+                                                id={`id3-${i}`}
+                                                dataset-index={i}
+                                                dataset-background={v}
+                                                className={`absolute inline-block -top-[1px] -right-[1px] border-[#1f1d1d] bottom-0 left-0 border-l border-b ${Math.floor(i / xSplit) === 0 ? 'border-t':'border-t-0'} `}
+                                                //className={Math.floor(i / xSplit) === 0 ? 'border-t':'border-t-0'}
                                                 style={{
-                                                // width: `${100 / xSplit}%`,
-                                                // height: `${100 / ySplit}%`,
-                                                width: `${tileWidth}px`,
-                                                height: `${tileHeight}px`,
-                                                top: `${getTileX(i, xSplit, ySplit)}%`,
-                                                left: `${getTileY(i, xSplit)}%`
-                                                }}
-                                            >
-                                        </div>: subObjectArray[i].value.map((c,x) => (
-                                        <div
-                                            id={`t2-${i}-${x}`}
-                                            key={x}
-                                            className="subtile "
-                                            style={{
-                                                width: `${100 / xSplit / subSplitX}%`,
-                                                height: `${100 / ySplit / subSplitY}%`,
-                                                top: `${getSubTileX(i, x, xSplit, ySplit, subSplitX, subSplitY)}%`,
-                                                left: `${getSubTileY(i, x,xSplit, subSplitX)}%`,
-                                            }}>
-                                        </div>
-                                        ))
-                                        ))}
-                                        {tiles.map((t, i) => (
-                                            subObjectArray[i].value.length === 0 ?
-                                                <div
-                                                    key={i}
-                                                    className="tileBorderxx absolute left-0 top-0"
-                                                    style={{
                                                     width: `${100 / xSplit}%`,
                                                     height: `${100 / ySplit}%`,
                                                     top: `${getTileX(i, xSplit, ySplit)}%`,
-                                                    left: `${getTileY(i, xSplit)}%`
-                                                    }}
+                                                    left: `${getTileY(i, xSplit)}%`,
+                                                    //background: selectedTilesArray.includes(i) ? 'rgba(0, 0, 0, 0.4)' : 'none',
+                                                    background: `${visibleBackgrounds('griddisplay1',tiles[i].gradients)}`,
+                                                    borderStyle: typeof(v)==='string' ? `none` : 'solid',
+                                                    border: typeof(v)==='string' ? `0px 0px 0px 0px` : '0px 0px 1px 1px',
+                                                    
+                                                }}
                                                 >
-                                                    <div className="tileBorderContentxx absolute -top-[1px] -right-[1px] border bottom-0 left-0 border-[#d3d3d3]"
-                                                        id={i}
-                                                        dataset-xval={getXCoord(i,xSplit,xsegmentSize)}
-                                                        dataset-yval={getYCoord(i,xSplit,ysegmentSize)}
-                                                        
-                                                        style={{
-                                                            background: `${dataArray[i]}`
-                                                        }}
-                                                    ></div>
-                                                </div> : subObjectArray[i].value.map((c,x) => ( 
+                                            </div>
+                                            :
+                                            tiles[i].subTiles.map((c,x) => (
                                                 <div
-                                                    key={x}
-                                                    id={`t2-${i}-${x}`}
-                                                    className="subtileBorderxx absolute left-0 top-0 "
-                                                    style={{
+                                                id={`id3-${i}-${x}`}
+                                                key={x}
+                                                className={`absolute inline-block top-0 right-0 bottom-0 left-0 border-[#f3f3f39c] border-l border-b`}
+                                                style={{
                                                     width: `${100 / xSplit / subSplitX}%`,
                                                     height: `${100 / ySplit / subSplitY}%`,
                                                     top: `${getSubTileX(i, x, xSplit, ySplit, subSplitX, subSplitY)}%`,
-                                                    left: `${getSubTileY(i, x, xSplit, subSplitX)}%`
-                                                    }}
-                                                >
-                                                    <div className=" absolute -top-[1px] -right-[1px] border bottom-0 left-0 border-[#d3d3d3] "
-                                                        // className={subObjectArray[i].value[x] != '' ? `red`:`absolute -top-[1px] -right-[1px] border bottom-0 left-0 border-[#d3d3d3]`}
-                                                    
-                                                    // 
-                                                        id={`t2-${i}-${x}`}
-                                                        dataset-xval={getSubXCoord(i,x,xSplit,xsegmentSize, subSplitX, subsegmentSizeX)}
-                                                        dataset-yval={getSubYCoord(i,x,ySplit,ysegmentSize, subSplitY, subsegmentSizeY)}
-                                                        
-                                                        style={{
-                                                            background: `${subObjectArray[i].value[x]}`,
-                                                            borderStyle: `${subObjectArray[i].value[x] != null ? `none`:`solid`}`
-                                                        }}
-                                                    ></div>
-                                                </div>
+                                                    left: `${getSubTileY(i, x,xSplit, subSplitX)}%`,
+                                                    background: 
+                                                    tiles[i].subTiles[x].gradients.length>0 ?
+                                                        `${visibleBackgrounds('griddisplay2',tiles[i].subTiles[x].gradients)}`
+                                                        : 'none'
+                                                }}>
+                                            </div>
                                             ))
-                                        ))}
-
-                                </TransformComponent> 
-                                </>
-                             )}
-                             </TransformWrapper>
-         
-                            </div>
-                        </div>
-    
-                     </div>
-    
+                                        ))
+                                    }
+                                    </TransformComponent> 
+                                    </>
+                                )}
+                                </TransformWrapper>
+                    </div>
                 </div>
-    
-    
+                <div className="col-span-3 row-span-2 col-start-3 row-start-4 border">
+
+                </div>
             </div>
-            </div>
+
+
+        </div>
       );
 
 }

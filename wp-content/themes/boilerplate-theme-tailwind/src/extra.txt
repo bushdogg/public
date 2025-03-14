@@ -1,0 +1,558 @@
+To add the ability for users to choose between radial and linear gradients, we need to update both the `GradientBuilder` and `GradientEditor` components. Here's how we can do it:
+
+### Step 1: Update GradientBuilder Component
+Add a dropdown to select the gradient type (linear or radial) and update the gradient preview accordingly.
+
+#### GradientBuilder.js
+```jsx
+
+```
+
+### Step 2: Update GradientEditor Component
+Update the `GradientEditor` component to handle the new gradient type and pass it to the `GradientBuilder`.
+
+#### GradientEditor.js
+```jsx
+import React from 'react';
+import GradientBuilder from './GradientBuilder';
+
+const GradientEditor = ({ selectedTiles, gradients, handleGradientChange, handleGradientSave, addColorStop, segmentWidth, segmentHeight, handleOriginalTileClick, canvasRef, showTileGrid, tileGridDimensions }) => {
+  const aspectRatio = segmentWidth / segmentHeight;
+  const selectedTilesLength = selectedTiles.length > 0 ? selectedTiles.length : 1;
+
+  function selectedIndex() {
+    let ids = '';
+    selectedTiles.forEach(element => {
+      ids += element.index + ', ';
+    });
+    return ids.slice(0, -2);
+  }
+
+  const gradient = gradients[selectedTiles[0].index] || { type: 'linear', angle: 0, stops: [{ color: '#ffffff', position: 0 }, { color: '#000000', position: 100 }] };
+
+  return (
+    <div>
+      <h3>Edit Gradient for Tiles {selectedIndex()}</h3>
+      <div style={{ display: 'flex', gap: '20px' }}>
+        <div>
+          <h4>Selected Tiles</h4>
+          <div style={{ position: 'relative', width: segmentWidth, height: segmentHeight }}>
+            <canvas ref={canvasRef} width={segmentWidth * selectedTilesLength} height={segmentHeight * selectedTilesLength} onClick={handleOriginalTileClick} />
+            {showTileGrid && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  height: '100%',
+                  display: 'grid',
+                  gridTemplateColumns: `repeat(${tileGridDimensions.width}, 1fr)`,
+                  gridTemplateRows: `repeat(${tileGridDimensions.height}, 1fr)`,
+                  gap: '0',
+                  border: '2px solid rgba(255, 255, 255, 0.5)',
+                }}
+              >
+                {[...Array(tileGridDimensions.width * tileGridDimensions.height)].map((_, index) => (
+                  <div
+                    key={index}
+                    style={{
+                      border: '1px solid rgba(0, 0, 0, 0.2)',
+                      background: 'none',
+                    }}
+                  ></div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+        <div>
+          <h4>Gradient Preview</h4>
+          <div
+            style={{
+              width: `${200 * aspectRatio}px`,
+              height: '200px',
+              background: gradient.type === 'linear'
+                ? `linear-gradient(${gradient.angle}deg, ${gradient.stops.map(stop => `${stop.color} ${stop.position}%`).join(', ')})`
+                : `radial-gradient(circle, ${gradient.stops.map(stop => `${stop.color} ${stop.position}%`).join(', ')})`,
+            }}
+          ></div>
+        </div>
+      </div>
+      <GradientBuilder
+        key={selectedTiles.join(',')}
+        gradient={gradient}
+        onChange={handleGradientChange}
+        onSave={handleGradientSave}
+        addColorStop={addColorStop}
+      />
+    </div>
+  );
+};
+
+export default GradientEditor;
+```
+
+### Summary
+- **GradientBuilder**: Added a dropdown to select the gradient type (linear or radial) and updated the gradient preview accordingly.
+- **GradientEditor**: Updated to handle the new gradient type and pass it to the `GradientBuilder`.
+
+This setup will allow users to choose between radial and linear gradients and see the preview accordingly. If you have any specific questions or need further assistance, feel free to ask!
+
+
+        <div
+            style={{ position: 'relative', display: 'inline-block' }}
+        >
+            <img src={imagePreview} alt="Uploaded" style={{ width: '100%' }} />
+            <div
+                style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    display: 'grid',
+                    gridTemplateColumns: `repeat(${gridWidth}, 1fr)`,
+                    gridTemplateRows: `repeat(${gridHeight}, 1fr)`,
+                    gap: '0',
+                    border: '2px solid rgba(255, 255, 255, 0.5)',
+                }}
+            >
+                {[...Array(gridWidth * gridHeight)].map((_, index) => (
+                    <div
+                        key={index}
+                        dataset-index={index}
+                        dataset-col={index % gridWidth}
+                        dataset-row={Math.floor(index / gridWidth)}
+                        onClick={(e) => handleTileClick(e)}
+                        style={{
+                            border: '1px solid rgba(0, 0, 0, 0.2)',
+                            //background: checkTile(index) ? 'rgba(0, 0, 0, 0.2)' : 'none',
+                            background: selectedTiles[0].index == index ? 'rgba(0, 0, 0, 0.2)' : 'none'
+                        }}
+                    ></div>
+                ))}
+            </div>
+        </div>
+		
+		
+        <div>
+            <div>
+            <TransformWrapper>
+                <TransformComponent>
+                <div style={{ display: 'inline-block', position: 'relative', 
+                    // height: `${gridDimensions.height}px`, 
+                    // width: `${gridDimensions.width}px`,
+                    // width: '100%',
+                    // height: '100%',
+                }}>
+                    <img src="" alt="" style={{ width: '100%' }} />
+                    <div
+                        style={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            width: '100%',
+                            height: '100%',
+                            display: 'grid',
+                            gridTemplateColumns: `repeat(${gridWidth}, 1fr)`,
+                            gridTemplateRows: `repeat(${gridHeight}, 1fr)`,
+                            gap: '0',
+                            // width: `${gridDimensions.width}px`,
+                            // height: `${gridDimensions.height}px`,
+                                }}
+                                >
+                            {[...Array(gridWidth * gridHeight)].map((_, index) => (
+                                <div
+                                    key={index}
+                                    style={{
+                                        background: gradients[index]
+                                            ? `linear-gradient(${gradients[index].angle}deg, ${gradients[index].stops.map(stop => `${stop.color} ${stop.position}%`).join(', ')})`
+                                            : 'none',
+                                        border: '1px solid rgba(0, 0, 0, 0.2)',
+                                    }}
+                                ></div>
+                            ))}
+                        </div>
+
+                            {/* </Space> */}
+                        </div>
+
+                </TransformComponent>
+            </TransformWrapper>
+                
+
+            </div>
+        </div>
+		
+		
+		const defaultGradient = { angle: 0, stops: [{ color: '#ffffff', position: 0 }, { color: '#000000', position: 100 }] };
+		const gradient = gradients[selectedTiles[0].index] || { type: 'linear', angle: 0, stops: [{ color: '#ffffff', position: 0 }, { color: '#000000', position: 100 }] };
+		`linear-gradient(${gradient.angle}deg, ${gradient.stops.map(stop => `${stop.color} ${stop.position}%`).join(', ')})`
+		
+		
+		{"0":{"angle":0,"stops":[{"color":"#0996f6","position":0},{"color":"#000000","position":100}]},"100":{"angle":0,"stops":[{"color":"#ffffff","position":0},{"color":"#000000","position":100}]},"120":{"angle":0,"stops":[{"color":"#ffffff","position":0},{"color":"#000000","position":100}]},"140":{"angle":0,"stops":[{"color":"#0996f6","position":0},{"color":"#000000","position":100}]}}
+		
+		
+		var obj = {key1: ["val1", "val2", "val3"], key2: "value2"};
+
+
+handleGradientChange: {"type":"linear","angle":0,"stops":[{"color":"#f10404","position":0},{"color":"#e70808","position":100}]}
+
+        <TransformWrapper>
+            <TransformComponent>
+        <div
+            style={{ position: 'relative', display: 'inline-block',
+                width: `calc(100%)`,
+                height: `calc(100%)`,
+             }}
+        >
+            <img src={imagePreview} alt="Uploaded" style={{ width: '100%' }} />
+            <div
+                style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    display: 'grid',
+                    gridTemplateColumns: `repeat(${gridWidth}, 1fr)`,
+                    gridTemplateRows: `repeat(${gridHeight}, 1fr)`,
+                    gap: '0',
+                    border: '2px solid rgba(255, 255, 255, 0.5)',
+                }}
+            >
+                {[...Array(gridWidth * gridHeight)].map((_, index) => (
+                    <div
+                        key={index}
+                        dataset-index={index}
+                        dataset-col={index % gridWidth}
+                        dataset-row={Math.floor(index / gridWidth)}
+                        onClick={(e) => handleTileClick(e)}
+                        style={{
+                            border: '1px solid rgba(0, 0, 0, 0.2)',
+                            //background: checkTile(index) ? 'rgba(0, 0, 0, 0.2)' : 'none',
+                            background: selectedTiles[0].index == index ? 'rgba(0, 0, 0, 0.2)' : 'none'
+                        }}
+                    ></div>
+                ))}
+            </div>
+        </div>
+        </TransformComponent>
+        </TransformWrapper>
+		
+		
+		                {[...Array(gridWidth * gridHeight)].map((_, index) => (
+                    <div
+                        key={index}
+                        dataset-index={index}
+                        dataset-col={index % gridWidth}
+                        dataset-row={Math.floor(index / gridWidth)}
+                        style={{
+                            border: '1px solid rgba(0, 0, 0, 0.2)',
+                            //background: checkTile(index) ? 'rgba(0, 0, 0, 0.2)' : 'none',
+                            background: gradients[index]
+                                            ? `linear-gradient(${gradients[index].angle}deg, ${gradients[index].stops.map(stop => `${stop.color} ${stop.position}%`).join(', ')})`
+                                            : 'none',
+                            width: `50px`,
+                        }}
+                    ></div>
+                ))}
+				
+035-213Account number: 477507
+
+
+
+rgba(2,0,36,1) 0%, rgba(9,9,121,1) 35%, rgba(0,212,255,1) 100%)
+
+handle
+object
+oldies
+
+word: *l##e
+
+
+
+UpdateDataArray:,,,,,,,,,,,,,,,,,,,,,,linear-gradient(90deg, rgba(2,0,36,1) 0%, rgba(125,105,82,1) 35%, RGBA(28,177,246,1) 56%, rgba(0,212,255,1) 100%)
+
+    const [subsegmentSizeX, setSubSegmentSizeX] = useState(xSegmentSize / subSplitX);
+    const [subsegmentSizeY, setSubSegmentSizeY] = useState(ySegmentSize / subSplitY);
+
+
+rbgcp-gradient-bar-canvas
+rbgcp-gradient-bar
+
+#rbgcp-gradient-bar-canvas
+
+rbgcp-gradient-handle-0
+div[id^="rbgcp-gradient-handle"] {
+
+}
+
+
+#rbgcp-gradient-handle-0-dot {
+	border: 2px solid red; border-radius: 50%; box-shadow: rgba(86, 140, 245, 0.95) 0px 0px 5px 5px;
+
+}
+
+
+
+
+rgb(74,69,178)
+
+background: linear-gradient(90deg, #003f5b, #2b4b7d, #5f5195, #98509d, #cc4c91, #f25375, #ff6f4e, #ff9913); /* made at https://learnui.design/tools/gradient-generator.html */
+<button type="button" class="whitespace-nowrap rounded-radius bg-secondary border border-secondary px-4 py-2<button type="button" class="whitespace-nowrap rounded-radius bg-secondary border border-secondary px-4 py-2 text-sm font-medium tracking-wide text-on-secondary transition hover:opacity-75 text-center focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary active:opacity-100 active:outline-offset-0 disabled:opacity-75 disabled:cursor-not-allowed dark:bg-secondary-dark dark:border-secondary-dark dark:text-on-secondary-dark dark:focus-visible:outline-secondary-dark">Secondary</button>
+ text-on-secondary transition hover:opacity-75 text-center focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary active:opacity-100 active:outline-offset-0 disabled:opacity-75 disabled:cursor-not-allowed dark:bg-secondary-dark dark:border-secondary-dark dark:text-on-secondary-dark dark:focus-visible:outline-secondary-dark">Secondary</button>
+
+
+<svg fill="#000000" version="1.1" id="Capa_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="73px" height="73px" viewBox="0 0 41.756 41.756" xml:space="preserve"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <g> <path d="M27.948,20.878L40.291,8.536c1.953-1.953,1.953-5.119,0-7.071c-1.951-1.952-5.119-1.952-7.07,0L20.878,13.809L8.535,1.465 c-1.951-1.952-5.119-1.952-7.07,0c-1.953,1.953-1.953,5.119,0,7.071l12.342,12.342L1.465,33.22c-1.953,1.953-1.953,5.119,0,7.071 C2.44,41.268,3.721,41.755,5,41.755c1.278,0,2.56-0.487,3.535-1.464l12.343-12.342l12.343,12.343 c0.976,0.977,2.256,1.464,3.535,1.464s2.56-0.487,3.535-1.464c1.953-1.953,1.953-5.119,0-7.071L27.948,20.878z"></path> </g> </g></svg>
+
+
+            {tiles.map((v, i) => (
+                subObjectArray[i].value==undefined ? 
+                //subObjectArray[i].value.length === 0 ?
+
+                    <div
+                    key={i}
+                    className="tile "
+                    style={{
+                        width: `${100 / xSplit}%`,
+                        height: `${100 / ySplit}%`,
+                        top: `${getTileX(i, xSplit, ySplit)}%`,
+                        left: `${getTileY(i, xSplit)}%`,
+                        background: selectedTilesArray.includes(i) ? 'rgba(0, 0, 0, 0.2)' : 'none'
+                    }}>
+					
+                    </div> : subObjectArray[i].value.length > 0 ?
+                        subObjectArray[i].value.map((c,x) => (
+                        <div
+                        id={`${idsuffix}-${i}-${x}`}
+                        key={x}
+                        className="subtile "
+                        style={{
+                            width: `${100 / xSplit / subSplitX}%`,
+                            height: `${100 / ySplit / subSplitY}%`,
+                            top: `${getSubTileX(i, x, xSplit, ySplit, subSplitX, subSplitY)}%`,
+                            left: `${getSubTileY(i, x,xSplit, subSplitX)}%`,
+                        }}>
+                    </div>
+                    )) : null
+            ))}
+
+
+            {tiles.map((v, i) => (
+                //subObjectArray[i].value.length === 0 ?
+                subObjectArray[i]==undefined || subObjectArray[i].value==undefined ?
+                <div
+                    key={i}
+                    id={`${idsuffix}-${i}`}
+                    className="tileBorder "
+                    style={{
+                    width: `${100 / xSplit}%`,
+                    height: `${100 / ySplit}%`,
+                    top: `${getTileX(i, xSplit, ySplit)}%`,
+                    left: `${getTileY(i, xSplit)}%`
+                    }}
+                >
+                    <div className="tileBorderContent "
+                        id={`${idsuffix}-${i}`}
+                        ref={refContainer}
+
+                        dataset-index={i}
+                        dataset-subindex={null}
+                        dataset-xval={getXCoord(i,xSplit,xSegmentSize)}
+                        dataset-yval={getYCoord(i,xSplit,ySegmentSize)}
+                        dataset-col={i % xSplit}
+                        dataset-row={Math.floor(i / xSplit)}
+
+                        onClick={(e) => handleTileClick(e)}
+                    ></div>
+                </div> : subObjectArray[i]!=undefined ?
+                        subObjectArray[i].value.map((c,x) => ( 
+                                     <div
+                                     key={x}
+                                     id={`${idsuffix}-${i}-${x}`}
+                                     className="subtileBorder "
+                                     style={{
+                                     width: `${100 / xSplit / subSplitX}%`,
+                                     height: `${100 / ySplit / subSplitY}%`,
+                                     top: `${getSubTileX(i, x, xSplit, ySplit, subSplitX, subSplitY)}%`,
+                                     left: `${getSubTileY(i, x, xSplit, subSplitX)}%`
+                                     
+                                     }}
+                                 >
+                                     <div className="subtileBorderContent "
+                                         id={`${idsuffix}-${i}-${x}`}
+                                         dataset-index={i}
+                                         dataset-subindex={x}
+                                         dataset-xval={getSubXCoord(i,x,xSplit,xSegmentSize, subSplitX, subsegmentSizeX)}
+                                         dataset-yval={getSubYCoord(i,x,ySplit,ySegmentSize, subSplitX, subsegmentSizeY)}
+                                         dataset-col={i % xSplit}
+                                         dataset-row={Math.floor(i / xSplit)}
+                                         onClick={(e) => handlTileClick(e)}
+
+                                     ></div>
+                                 </div>
+                )) : null
+            ))}
+
+
+                                            <div 
+                                                className="inline-block"
+                                                style={{
+                                                    //height: `${Number(imageHeight) + Number(xSplit)}px`,
+                                                    //width: `${Number(imageWidth) + Number(ySplit)}px`
+                                                    width: `${tileWidth*xSplit}px`,
+                                                    height: `${tileHeight*ySplit}px`
+                                                    //height: `${100}%`,
+                                                    //width: `${100}%`,
+                                                    //width: `${Number(imageWidth)}px`
+                                                }}
+                                            ></div>
+                                            {/* <img className="imag2" height={imageHeight} width={imageWidth}  alt="" /> */}
+                                            {tiles.map((t, i) => (
+                                                subObjectArray[i]==undefined ?
+                                                <div
+                                                    key={i}
+                                                    
+                                                    className="tile2XX absolute inline-block "
+                                                    style={{
+                                                    // width: `${100 / xSplit}%`,
+                                                    // height: `${100 / ySplit}%`,
+                                                    width: `${tileWidth}px`,
+                                                    height: `${tileHeight}px`,
+                                                    top: `${getTileX(i, xSplit, ySplit)}%`,
+                                                    left: `${getTileY(i, xSplit)}%`,
+                                                    borderStyle: `${dataArray[i] != null ? `none`:`solid`}`
+                                                    }}
+                                                >
+                                            </div>: subObjectArray[i]!=undefined ? subObjectArray[i].value.map((c,x) => (
+                                            <div
+                                                id={`t2-${i}-${x}`}
+                                                key={x}
+                                                className="subtile "
+                                                style={{
+                                                    width: `${100 / xSplit / subSplitX}%`,
+                                                    height: `${100 / ySplit / subSplitY}%`,
+                                                    top: `${getSubTileX(i, x, xSplit, ySplit, subSplitX, subSplitY)}%`,
+                                                    left: `${getSubTileY(i, x,xSplit, subSplitX)}%`,
+                                                    borderStyle: `${dataArray[i] != null ? `none`:`solid`}`
+                                                }}>
+                                            </div>
+                                            )) : null
+                                            ))}
+                                            {tiles.map((t, i) => (
+                                                subObjectArray[i]==undefined ?
+                                                    <div
+                                                        key={i}
+                                                        className="tileBorderxx absolute left-0 top-0"
+                                                        style={{
+                                                        width: `${100 / xSplit}%`,
+                                                        height: `${100 / ySplit}%`,
+                                                        top: `${getTileX(i, xSplit, ySplit)}%`,
+                                                        left: `${getTileY(i, xSplit)}%`,
+                                                        borderStyle: `${dataArray[i] != null ? `none`:`solid`}`
+                                                        }}
+                                                    >
+                                                        <div className="tileBorderContentxx absolute -top-[1px] -right-[1px] border bottom-0 left-0 border-[#d3d3d3]"
+                                                            id={i}
+                                                            dataset-xval={getXCoord(i,xSplit,xSegmentSize)}
+                                                            dataset-yval={getYCoord(i,xSplit,ySegmentSize)}
+                                                            
+                                                            style={{
+                                                                background: `${dataArray[i]}`,
+                                                                borderStyle: `${dataArray[i] != null ? `none`:`solid`}`
+                                                            }}
+                                                        ></div>
+                                                    </div> : subObjectArray[i]!=undefined ? subObjectArray[i].value.map((c,x) => ( 
+                                                    <div
+                                                        key={x}
+                                                        id={`t2-${i}-${x}`}
+                                                        className="subtileBorderxx absolute left-0 top-0 "
+                                                        style={{
+                                                        width: `${100 / xSplit / subSplitX}%`,
+                                                        height: `${100 / ySplit / subSplitY}%`,
+                                                        top: `${getSubTileX(i, x, xSplit, ySplit, subSplitX, subSplitY)}%`,
+                                                        left: `${getSubTileY(i, x, xSplit, subSplitX)}%`,
+                                                        borderStyle: `${subObjectArray[i].value[x] != null ? `none`:`solid`}`
+                                                        }}
+                                                    >
+                                                        <div className=" absolute -top-[1px] -right-[1px] border bottom-0 left-0 border-[#d3d3d3] "
+                                                            // className={subObjectArray[i].value[x] != '' ? `red`:`absolute -top-[1px] -right-[1px] border bottom-0 left-0 border-[#d3d3d3]`}
+                                                        
+                                                        // 
+                                                            id={`t2-${i}-${x}`}
+                                                            dataset-xval={getSubXCoord(i,x,xSplit,xSegmentSize, subSplitX, subsegmentSizeX)}
+                                                            dataset-yval={getSubYCoord(i,x,ySplit,ySegmentSize, subSplitX, subsegmentSizeY)}
+                                                            
+                                                            style={{
+                                                                background: `${subObjectArray[i].value[x]}`,
+                                                                borderStyle: `${subObjectArray[i].value[x] != null ? `none`:`solid`}`
+                                                            }}
+                                                        ></div>
+                                                    </div>
+                                                )) : null
+                                            ))}
+
+
+    useEffect(() => {
+        let newBackgrounds = []
+        gradients.forEach(function (item) {
+            //if (item.visible) {
+                let l_gradient = null
+                l_gradient = item.gradientType + '-gradient('
+        
+                switch (item.gradientType) {
+                    case 'linear':
+                        l_gradient = l_gradient + item.angle + 'deg, '
+                        break
+                    case 'radial':
+                        l_gradient = l_gradient + 'circle at ' + item.xposition + '% ' + item.yposition + '%,' 
+                        break
+                    case 'conic':
+                        l_gradient = l_gradient + 'from ' + item.angle + 'deg at '  + item.xposition + '% ' + item.yposition + '%,'
+                        break
+                }
+                for (let index = 0; index < item.stops.length; index++) {
+                    //let rgbColor = convertHexToRgbA(item.stops[index].color)
+                    let rgbColor = item.stops[index].color
+                    l_gradient =l_gradient + ' ' + rgbColor + ' ' + item.stops[index].position_from + '%'
+                    if (item.stops[index].position_to != null) {
+                        l_gradient = l_gradient + ' ' + item.stops[index].position_to + '%'
+                    }
+                    if (index < item.stops.length-1) {
+                        l_gradient = l_gradient + ','
+                    } else if (index === item.stops.length-1) {
+                        l_gradient = l_gradient + ')'
+                    }
+                }
+                newBackgrounds.push(l_gradient)
+            //}
+        })
+        setBackgrounds(newBackgrounds)
+
+        //handleBackgroundChange(l_gradient)
+        //console.log('useEffect - Builder' + JSON.stringify(stops))
+        },[gradients])
+
+    function handleClick(e) {
+        setClickedObject('canvas')
+        var idx = parseInt(e.currentTarget.id)
+        setIndex(idx)
+        var x = Number(e.currentTarget.getAttribute('dataset-xval'))
+        var y = Number(e.currentTarget.getAttribute('dataset-yval'))
+        setSelectedX(x)
+        setSelectedY(y)
+        
+        var obj = {
+            img: image,
+            x: x,
+            y: y,
+            xseg: xSegmentSize,
+            yseg: ySegmentSize
+        }
+        setSplit(false)
+        setClicked(!clicked)
+        setColor('')
+
+    }

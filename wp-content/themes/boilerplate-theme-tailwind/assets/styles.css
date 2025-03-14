@@ -167,3 +167,35 @@ input {
     font-size: 0.7rem;
   }
   
+
+#rbgcp-gradient-bar {
+    height: 200px;
+}
+
+#rbgcp-gradient-bar-canvas {
+    height: 100px !important;
+}
+
+div[id^="rbgcp-gradient-handle"] {
+    outline-style: none;
+}
+
+div[id^="rbgcp-gradient-handle-"][id$="-dot"] {
+	border-left: 2px solid red !important; 
+    border-radius: 0 !important;
+    height: 100px !important;
+    -webkit-transform: skewX(-10deg);
+    -moz-transform: skewX(-10deg);
+    -ms-transform: skewX(-10deg);
+    transform: skewX(-10deg);
+    
+
+}
+
+div[id^="rbgcp-gradient-handle-"][id$="-selected-dot"] {
+    width: 5px !important; 
+    height: 5px !important; 
+    border-radius: 50% !important; 
+    background: white !important;
+
+}
