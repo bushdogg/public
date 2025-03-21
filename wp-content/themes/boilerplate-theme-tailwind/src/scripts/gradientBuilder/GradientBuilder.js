@@ -49,7 +49,7 @@ function convertHexToRgbA(hexVal) {
     }
 }
 
-const GradientBuilder = ({gradients, activeGradient, handleActiveGradient, handleAddGradient, handleGradientsChange, height, width, activeStop, handleActiveStop, handleGradientsStopChange, handleAddStop, handleRemoveStop, handleStopBlur}) => {
+const GradientBuilder = ({gradients, activeGradient, handleActiveGradient, handleAddGradient, handleGradientsChange, height, width, activeStop, handleActiveStop, handleGradientsStopChange, handleAddStop, handleRemoveStop, handleStopBlur, handleColorSwitch}) => {
     //const [gradients, setGradients] = useState([]);
     //console.log(gradients)
         function BackgroundFromGradients (item) {
@@ -89,7 +89,7 @@ const GradientBuilder = ({gradients, activeGradient, handleActiveGradient, handl
     return (
         <>
             <div className='grid'>
-                   <div>
+                   <div onClick={() => handleActiveGradient(-1)}>
                         <button
                         className="outline rounded-lg bg-blue-700 text-white text-center px-4 py-2"
                         onClick={handleAddGradient}
@@ -102,6 +102,7 @@ const GradientBuilder = ({gradients, activeGradient, handleActiveGradient, handl
                                 onClick={() => handleActiveGradient(i)}
                             >
                                 <GradientDisplay
+                                activeGradient={activeGradient}
                                 gradientIndex={i}
                                 visible={x.visible}
                                 background={BackgroundFromGradients(gradients[i])}
@@ -110,7 +111,7 @@ const GradientBuilder = ({gradients, activeGradient, handleActiveGradient, handl
                                 handleGradientsChange={handleGradientsChange}
                                 ></GradientDisplay>
 
-                                {x.visible ? 
+                                {x.visible && activeGradient===i ? 
                                 <GradientTools
                                 gradientIndex={i}
                                 handleGradientsChange={handleGradientsChange}
@@ -122,14 +123,13 @@ const GradientBuilder = ({gradients, activeGradient, handleActiveGradient, handl
                                 handleActiveStop={handleActiveStop}
                                 handleRemoveStop={handleRemoveStop}
                                 handleStopBlur={handleStopBlur}
+                                handleColorSwitch={handleColorSwitch}
                                 ></GradientTools>
                                 : null
                                 }
                             
                             </div>
                         ))
-                        
-                  
                 }
             </div>
         </>

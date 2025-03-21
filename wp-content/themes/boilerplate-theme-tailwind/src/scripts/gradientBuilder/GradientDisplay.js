@@ -1,10 +1,10 @@
 import React from 'react';
 
-const GradientDisplay = ({gradientIndex, visible, handleGradientsChange, background, height, width}) => {
+const GradientDisplay = ({gradientIndex, activeGradient, visible, handleGradientsChange, background, height, width}) => {
 
     return (
         <>
-        <div className={`inline-block relative h-[${height}px] w-[${width}px]`}
+        <div className={`inline-block relative border border-black`}
             style={{
                 background: background != undefined ? `${background}` : 'none',
                 height: `${Number.parseInt(height/2)}px`,
@@ -19,10 +19,10 @@ const GradientDisplay = ({gradientIndex, visible, handleGradientsChange, backgro
                     }}
             onClick={() => handleGradientsChange(gradientIndex, 'visible', !visible)}
             >
-                {visible ? 'H':'S'}
+                {visible ? <img src={require('../../images/visible.png')}></img>:<img src={require('../../images/hide.png')}></img>}
             </div>
         </div>
-        <div>{background}</div>
+        {activeGradient === gradientIndex ? <div>{background}</div> : null}
         </>
     )
 }

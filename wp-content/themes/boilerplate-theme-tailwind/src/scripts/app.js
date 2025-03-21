@@ -5,6 +5,13 @@ import { TransformWrapper, TransformComponent, useControls } from "react-zoom-pa
 import axios from 'axios';
 import GradientBuilder from "./gradientBuilder/GradientBuilder";
 
+
+// Access the post ID variable passed from PHP
+if (typeof post_id_object !== 'undefined') {
+    var post_id = post_id_object.post_id;
+    //console.log(post_id); // Output the post ID to the browser console
+}
+
 const image = acf_vars.my_localized_var.url
     function convertHexToRgbA(hexVal) {
         let ret;
@@ -291,7 +298,8 @@ export default function App() {
     const [subsegmentSizeY, setSubSegmentSizeY] = useState(ySegmentSize / subSplitY);
     // const [horizontalSubSplit, setHorizontalSubSplit] = useState(10);
     // const [verticalSubSplit, setVerticalSubSplit] = useState(10);
-    const [overlap, setOverlap] = useState(0);
+    const [saving, setSaving] = useState(false);
+
     const [color, setColor] = useState('');
     const [background, setBackground] = useState('');
     //const degrees = 90//color ? parseInt(color?.split(',')[0]?.split('(')[1]) : 90
@@ -310,12 +318,24 @@ export default function App() {
     const [imageBuffer, setImageBuffer] = useState(0);
     const [split, setSplit] = useState(false);
     const [splitParents, setSplitParents] = useState([]);
-    const [zoomCanvasSize, setZoomCanvasSize] = useState(200);
+    const [canvasElement, setCanvasElement] = useState(document.getElementById('canvas-2'));
+    const [expandBuilder, setExpandBuilder] = useState(false);
+
+    //const element = document.getElementById('canvas-2');
+    //if (element!=null) {
+    //   console.log(element.getBoundingClientRect())
+    //}
+
+    
+    const [zoomCanvasSize, setZoomCanvasSize] = useState({
+        width: 0,
+        height: 0,
+    });
     const [clickedObject, setClickedObject] = useState();
     const [zoomImage, setZoomImage] = useState();
     //const [segmentSize, setSegmentSize] = useState(5);
     //const [imageColumns, setImageColumns] = useState(0)
-    const aspectRatio = xSegmentSize / ySegmentSize
+    const aspectRatio = ySegmentSize / xSegmentSize
     function initalTilesArray () {
         let array = Array.from({ length: xSplit * ySplit });
         for (let index = 0; index < array.length; index++) {
@@ -343,7 +363,7 @@ export default function App() {
         }
         return array
     }
-
+7
     const subTiles = Array.from(initalSubTilesArray());
 
     const zoomImg = (newImage) => {
@@ -363,9 +383,6 @@ export default function App() {
 
       function handleClicked(val) {
         setClicked(val)
-      }
-      function handleColor(val) {
-        setColor(val)
       }
 
       function handleClickedObject(val) {
@@ -396,15 +413,50 @@ export default function App() {
             newTiles[selectedTilesArray[0]].subTiles[selectedSubTilesArray[0]].gradients[gradientindex].stops[index][key] = value
         } else if (selectedTilesArray[0]!=undefined) {
             newTiles[selectedTilesArray[0]].gradients[gradientindex].stops[index][key] = value
+            //console.log(value)
         }
         //const newGradients = [...tiles[selectedTilesArray].gradients]
         //console.log(gradients[gradientindex].stops)
-        console.log(newTiles)
+        
         //newGradients[gradientindex].stops[index][key] = value;
         //setGradients(newGradients);
         //newTiles[selectedTilesArray[0]].gradients = newGradients
         setTiles(()=>newTiles)
       };
+
+    function handleColorSwitch (gradientindex) {
+        const newTiles = [...tiles]
+        if (selectedTilesArray[0]!=undefined && selectedSubTilesArray[0]!=undefined) {
+            let numStops = newTiles[selectedTilesArray[0]].subTiles[selectedSubTilesArray[0]].gradients[gradientindex].stops.length
+            switch (numStops) {
+                case 2:
+                    newTiles[selectedTilesArray[0]].subTiles[selectedSubTilesArray[0]].gradients[gradientindex].stops[0].color = newTiles[selectedTilesArray[0]].subTiles[selectedSubTilesArray[0]].gradients[gradientindex].stops[1].color
+                    newTiles[selectedTilesArray[0]].subTiles[selectedSubTilesArray[0]].gradients[gradientindex].stops[1].color = newTiles[selectedTilesArray[0]].subTiles[selectedSubTilesArray[0]].gradients[gradientindex].stops[0].color
+                    break
+            }
+            
+            
+        } else if (selectedTilesArray[0]!=undefined) {
+            
+            let numStops = newTiles[selectedTilesArray[0]].gradients[gradientindex].stops.length
+            switch (numStops) {
+                case 2:
+                    let stop0Color = newTiles[selectedTilesArray[0]].gradients[gradientindex].stops[0].color
+                    let stop1Color = newTiles[selectedTilesArray[0]].gradients[gradientindex].stops[1].color
+                    newTiles[selectedTilesArray[0]].gradients[gradientindex].stops[0].color = stop1Color
+                    newTiles[selectedTilesArray[0]].gradients[gradientindex].stops[1].color = stop0Color
+                    console.log(newTiles)
+                    break
+            }
+        }
+        //const newGradients = [...tiles[selectedTilesArray].gradients]
+        //console.log(gradients[gradientindex].stops)
+        
+        //newGradients[gradientindex].stops[index][key] = value;
+        //setGradients(newGradients);
+        //newTiles[selectedTilesArray[0]].gradients = newGradients
+        setTiles(()=>newTiles)
+    };
 
     function handleAddStop (gradientindex, position) {
         const newTiles = [...tiles]
@@ -489,6 +541,13 @@ export default function App() {
         //console.log(newTiles)
         setTiles(() => newTiles)
     }
+    function handleCanvasDimensions(dimensions) {
+        //console.log('handleCanvasDimensions: ' + JSON.stringify(dimensions))
+        let width = dimensions.width
+        let height = (imageHeight / imageWidth) * width
+        setZoomCanvasSize({width: width, height: height})
+        //console.log('handleCanvasDimensions: ' + JSON.stringify(zoomCanvasSize))
+    }
 
     function UpdateDataArray () {
         // var newDataArray = []
@@ -532,13 +591,43 @@ export default function App() {
         setTiles(newTiles)
         //console.log(newTiles)
         //setDataArray(newDataArray)
-
     }
-    function UpdateDBTable () {
+    async function getToken(password, username) {
+        return axios({
+          method: "post",
+          url: "http://react-example.local/wp-json/jwt-auth/v1/token",
+          data: { username: username, password: password }
+        }).then(res => res.data.token);
+      }
+      
+      async function doSomething(body, token) {
+        return axios({
+          method: "post",
+          url: 'http://react-example.local/wp-json/wp/v2/css-image/'+post_id,
+          headers: { 
+                'Content-type': 'application/json',
+                'Authorization': `Bearer  ${token}`
+           },
+            data:body
+          
+        })
+      }
+      const UpdateDBTable = async (req, res) => {
+        setSaving(() => true)
         var arrayObj = []
-        for (let i = 0; i < dataArray.length; i++) {
-            if (dataArray[i] !=undefined) {
-                let obj = {index: i, color: dataArray[i]}
+        for (let i = 0; i < tiles.length; i++) { 
+            if (tiles[i].subTiles.length > 0) {
+                for (let x = 0; x < tiles[i].subTiles.length; x++) {
+                    if (tiles[i].subTiles[x].gradients[0] !=undefined) {
+                        //let obj = {index: i, color: visibleBackgrounds('Update DB',tiles[i].subTiles[x].gradients, false), sub_index: x}
+                        let obj = {index: i, color: JSON.stringify(tiles[i].subTiles[x].gradients), sub_index: x}
+                        arrayObj.push(obj)
+                    }
+                }
+            } else if (tiles[i].gradients[0] !=undefined) {
+                //let obj = {index: i, color: visibleBackgrounds('Update DB',tiles[i].gradients, true), sub_index: null}
+                let obj = {index: i, color: JSON.stringify(tiles[i].gradients), sub_index: null}
+                //console.log(obj)
                 arrayObj.push(obj)
             }
         }
@@ -548,38 +637,20 @@ export default function App() {
                 "css_coordinates": arrayObj
             }
         }
-        let config = {
-            headers: {
-                'Content-type': 'application/json',
-                'Authorization': `Bearer ${myThemeParams.BearerToken}`
-            }
+        const token = await getToken("admin", "admin");
+        const responseClear = await doSomething(
+            {
+                "acf": {
+                    "css_coordinates": []
+                }
+            }, token);
+        const response = await doSomething(postBody, token);
+        //res.json({ objectVariableRetrievedFromAxiosRequests: token });
+        if (response.status === 200) {
+            setSaving(() => false)
         }
-        axios.post('http://react-example.local/wp-json/wp/v2/css-image/5', postBody, config)
-        .then(response => {
-            console.log(response.data);
-        })
-        .catch(error => {
-            console.error('Error with POST request:', error);
-        });
+        //console.log(response)
     }
-    //const X = arrayRange(0, imageWidth, xSegmentSize)
-    //const Y = arrayRange(0, imageHeight, ySegmentSize)
-    // const arrayRange = (start, stop, step) =>
-    //     Array.from(
-    //     { length: (stop - start) / step + 1 },
-    //     (value, index) => start + index * step
-    //     );
-    // function handleSplit(e) { 
-    //     let splitTemp = {}
-    //     setSplit(e.target.checked)
-
-    //     if (index != undefined && split===true) {
-    //         splitTemp = {[index]: subTiles};
-    //         console.log(subTiles)
-    //         console.log(split)
-    //     }
-
-    // }
     const handleSubTileClick = (e) => {
         if (!e.shiftKey) {
             let parentIndex = Number(e.currentTarget.getAttribute('dataset-parent'))
@@ -684,9 +755,13 @@ export default function App() {
         }
     };
     const drawSubImageSegment = () => {
+        console.log(canvasRef.current)
         if (canvasRef.current && image && selectedSubTilesArray.length === 1) {
+            
             const canvas = canvasRef.current;
-            const ctx = canvas.getContext('2d');
+            const canvasWidth = canvas.offsetWidth
+            console.log(canvasWidth)
+            const ctx = canvas.getContext('2d', { willReadFrequently: true });
             const img = new Image();
             img.src = image;
             img.onload = () => {
@@ -718,6 +793,7 @@ export default function App() {
     }
 
     const drawImageSegment = (indices) => {
+        //console.log(canvasRef.current)
         if (canvasRef.current && image) {
             var destX = 0
             var destY = 0
@@ -725,17 +801,22 @@ export default function App() {
             var row=0
             var i = 0
             const canvas = canvasRef.current;
-            const ctx = canvas.getContext('2d');
+            let width = canvas.offsetWidth
+            let height = (imageHeight / imageWidth) * width 
+            setZoomCanvasSize({width: width, height: height})
+            //console.log(zoomCanvasSize)
+            
+            const ctx = canvas.getContext('2d', { willReadFrequently: true });
             const img = new Image();
             img.src = image;
             img.onload = () => {
 
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
-                let canvasMultiplierX = (zoomCanvasSize*aspectRatio) / xSegmentSize
-                let canvasMultiplierY = zoomCanvasSize / ySegmentSize
+                //let canvasMultiplierX = (zoomCanvasSize*aspectRatio) / xSegmentSize
+                //let canvasMultiplierY = zoomCanvasSize / ySegmentSize
                 var obj = {
-                    canvasMultiplierX: canvasMultiplierX,
-                    canvasMultiplierY: canvasMultiplierY,
+                    //canvasMultiplierX: canvasMultiplierX,
+                    //canvasMultiplierY: canvasMultiplierY,
                     xSegmentSize: xSegmentSize,
                     ySegmentSize: ySegmentSize,
                     canvasHeight: canvas.height,
@@ -794,12 +875,26 @@ export default function App() {
             const rect = canvas.getBoundingClientRect();
             const x = event.clientX - rect.left;
             const y = event.clientY - rect.top;
+            var obj = {
+                //event: event,
+                //rect: rect,
+                canvasHeight: canvas.height,
+                canvasWidth: canvas.width,
+                x: x,
+                y: y,
+                //rectLeft: rect.left,
+                //clientX: event.clientX, 
+                //rectTop: rect.top,
+                //clientY: event.clientY,
+                }
+            //console.log(obj)
+
             const imageData = ctx.getImageData(x, y, 1, 1).data;
             const pickedColor = `rgba(${imageData[0]}, ${imageData[1]}, ${imageData[2]}, ${imageData[3] / 255})`;
-            //console.log(color)
+            //console.log(pickedColor)
             
-            if (activeStop!=null && activeStop!=undefined && activeGradient!=undefined) {
-                handleGradientsStopChange(activeGradient, activeStop.stopIndex, 'color', pickedColor)
+            if (activeStop.gradientIndex!=null && activeStop.stopIndex!=null ) {
+                handleGradientsStopChange(activeStop.gradientIndex, activeStop.stopIndex, 'color', pickedColor)
             }
         }
     };
@@ -816,6 +911,26 @@ export default function App() {
         // setSelectedSubY(y)
         // drawImageSegment(selectedTiles)
         // //setClicked(!clicked)
+    }
+    function getCanvasContainerHeight() {
+        let element = document.getElementById('canvas-container')
+        if (element!=null) {
+            let rect = element.getBoundingClientRect()
+            
+            return Number.parseInt(rect.width * aspectRatio)
+            
+            //return 200
+        }
+    }
+    function getCanvasContainerWidth() {
+        let element = document.getElementById('canvas-container')
+        if (element!=null) {
+            let rect = element.getBoundingClientRect()
+            
+            return Number.parseInt(rect.width )
+            
+            //return 200
+        }
     }
 
     function handleClearSplit() {
@@ -845,15 +960,18 @@ export default function App() {
     function handleActiveGradient(val) {
         setActiveGradient(val)
     }
-    function visibleBackgrounds (from,item) {
+    
+    
+    
+    function visibleBackgrounds (from,item, all = false) {
         let visiblebackgrounds = []
         //console.log(tiles)
         if (item==undefined){
-            console.log(from)
+            //console.log(from)
             return 'none'
         }
             item.forEach(function (item) {
-                if (item.visible) {
+                if (item.visible || all) {
                     let l_gradient = null
                     l_gradient = item.gradientType + '-gradient('
             
@@ -888,7 +1006,34 @@ export default function App() {
         return visiblebackgrounds.toString()
 
     }
+    const GetTilesFromDB = async (req, res) => {
+        //const token = await getToken("admin", "admin");
+        
+        const response = await axios({
+            method: "get",
+            url: 'http://react-example.local/wp-json/wp/v2/css-image/'+post_id+'?_fields=acf'
+            //headers: { 
+            //    'Content-type': 'application/json'
+                //'Authorization': `Bearer  ${token}`
+            //}
+        })
+        //console.log(response.data.acf.css_coordinates)
+        setTiles(() => initalTilesArray)
+        if (response.data.acf.css_coordinates.length > 0) {
 
+            var newTiles = [...tiles]
+            response.data.acf.css_coordinates.forEach((item) => {
+                console.log(item)
+                if (Number.parseInt(item.sub_index) >= 0) {
+                    newTiles[item.index].subTiles[item.sub_index].gradients = JSON.parse(item.color)
+                } else {
+                    newTiles[item.index].gradients = JSON.parse(item.color)
+                }
+            })
+            console.log(newTiles)
+            setTiles(() => newTiles)
+        }
+    }
     useEffect(() => {
         var img = new Image();
         img.crossOrigin = 'anonymous';
@@ -899,6 +1044,12 @@ export default function App() {
         }
         setImg(img)
         
+        //console.log('postid' + post_id)
+        if (post_id !=undefined) {
+            GetTilesFromDB()
+        }
+        
+        
         },[])
         useEffect(() => {
             setSplit(false)
@@ -907,15 +1058,9 @@ export default function App() {
             setXSegmentSize(imageWidth / xSplit)
             setYSegmentSize(imageHeight / ySplit)
                 //UpdateDataArray()
-            setTiles(initalTilesArray)
+            //setTiles(initalTilesArray)
 
         },[xSplit, ySplit, imageHeight, imageWidth])
-
-        useEffect(() => {
-
-            //UpdateDataArray()
-            //console.log('useEffect Update color')
-        },[background,backgrounds])
 
         useEffect(() => { 
 
@@ -933,8 +1078,8 @@ export default function App() {
          useEffect(() => {
             if (refContainer.current) {
                 //console.log(refContainer.current.getBoundingClientRect().width)
-                setTileHeight(refContainer.current.offsetHeight*.83);
-                setTileWidth(refContainer.current.offsetWidth*.83);
+                setTileHeight(refContainer.current.offsetHeight)//*.83);
+                setTileWidth(refContainer.current.offsetWidth) //.83);
             }
 
          },[refContainer])
@@ -959,6 +1104,30 @@ export default function App() {
             }
 
          },[selectedSubTilesArray])
+        //  useEffect(() => {
+        //     if (canvasElement!=null) {
+        //         let rect = canvasElement.getBoundingClientRect()
+        //         let width = rect.width
+        //         let height = (imageHeight / imageWidth)* width
+        //         setZoomCanvasSize({
+        //             width: width,
+        //             height: height,
+        //         })
+        //         console.log(zoomCanvasSize)
+        //     }
+
+        //     // if (canvasRef.current) {
+        //     //     let width = canvasRef.current.offsetWidth
+        //     //     let height = (imageHeight / imageWidth)* width
+        //     //     setZoomCanvasSize({
+        //     //         width: width,
+        //     //         height: height,
+        //     //     })
+        //     //     console.log(zoomCanvasSize)
+        //     // }
+
+        //  },[canvasElement])
+
     return (
         <div className="App">
     
@@ -1060,6 +1229,15 @@ export default function App() {
             </div>
             </div>
             <div>
+                <div>
+                    <button
+                    className="outline outline-blue-800 py-3 px-2"
+                    onClick={UpdateDBTable}>Update DB Table</button>
+                    {saving ?
+                        <div>Saving...</div>
+                    : null}
+
+                </div>
                 <div style={{background: selectedTilesArray.length === 1 ? 'red' : 'none'}}>
                     Index: {selectedTilesArray[0]}
                 </div>
@@ -1075,27 +1253,50 @@ export default function App() {
                     >Clear</button>
                 </div>
             </div>
-
-
-            <div className="grid grid-cols-5 grid-rows-5 gap-4 border">
-                <div className="col-span-2 row-span-3 border">
-                    <div className={`h-[${zoomCanvasSize}px] w-[${zoomCanvasSize*aspectRatio}px] relative`}>
-                            <div className="inline-block  ">
+            <div
+                        onClick={()=> setExpandBuilder(!expandBuilder)}
+            >
+                {!expandBuilder ? '>' : 'X'}
+            </div>
+            <div 
+            className="grid grid-cols-5 grid-rows-5 gap-4 border">
+                <div 
+                    className={expandBuilder ? 'flex gap-4 col-span-5 row-span-3 border' : 'col-span-2 row-span-3 border'}
+                    >
+                    <div 
+                        id='canvas-container'
+                        className="relative"
+                        //className={`h-[${zoomCanvasSize.height}]px w-full relative`}
+                        style={{
+                            //height: `${zoomCanvasSize.height===0?100:Number.parseInt(zoomCanvasSize.height)}px`,
+                            //width: `${zoomCanvasSize.width===0?100:Number.parseInt(zoomCanvasSize.width)}px`,
+                            height: `${getCanvasContainerHeight()}px`,
+                            maxHeight: `${getCanvasContainerHeight()}px`,
+                            width: `100%`,
+                            maxWidth: '500px'
+                        }}
+                        >
+                            {/* <div className=""> */}
                                 <Canvas 
-                                    className="imageWrapper2XX inline-block absolute" 
+                                    //className={`h-[${zoomCanvasSize.height}]px w-full`}
                                     canvasRef={canvasRef}
+                                    handleCanvasDimensions={handleCanvasDimensions}
+                                    aspectRatio={aspectRatio}
+                                    height={getCanvasContainerHeight()}
+                                    width={getCanvasContainerWidth()}
+                                    //imageWidth={imageWidth}
                                     //draw={draw} 
-                                    height={zoomCanvasSize} 
-                                    width={zoomCanvasSize*aspectRatio} 
+                                    //height={zoomCanvasSize} 
+                                    //width={zoomCanvasSize*aspectRatio} 
                                     //clicked={clicked} 
-                                    stateChanger={zoomImg} 
+                                    //stateChanger={zoomImg} 
                                     handleCanvasClick={handleCanvasClick} />
                                             {selectedTilesArray.length > 0 ? 
                                                 tiles[selectedTilesArray[0]].subTiles.map((t, i) => (
                                                     selectedTilesArray[0] !=undefined && split === true ?
                                                         <div
                                                             key={i}
-                                                            className="tile2XX absolute inline-block "
+                                                            className="absolute inline-block "
                                                             style={{
                                                             width: `${100 / subSplitX}%`,
                                                             height: `${100 / subSplitY}%`,
@@ -1108,12 +1309,11 @@ export default function App() {
                                                 )): null
                                             }
                                             {selectedTilesArray.length > 0 ? 
-                                            
                                                 tiles[selectedTilesArray[0]].subTiles.map((t, i) => (
                                                     selectedTilesArray[0] !=undefined && split === true ?
                                                         <div
                                                         key={i}
-                                                        className="tileBorderxx absolute left-0 top-0"
+                                                        className=" absolute left-0 top-0"
                                                         style={{
                                                         width: `${100 / subSplitX}%`,
                                                         height: `${100 / subSplitY}%`,
@@ -1132,7 +1332,7 @@ export default function App() {
                                                     
                                                 )): null
                                             }
-                            </div>
+                            {/* </div> */}
                         </div>
                         <div
                             style={{
@@ -1142,14 +1342,21 @@ export default function App() {
                                     tiles[selectedTilesArray[0]].subTiles[selectedSubTilesArray[0]]!=undefined ?
                                          `${visibleBackgrounds('builderdisplay1',tiles[selectedTilesArray[0]].subTiles[selectedSubTilesArray[0]].gradients)}`
                                      :null :
-                                      selectedTilesArray[0]!=undefined ? 
+                                      selectedTilesArray[0]!=undefined ?
                                       `${visibleBackgrounds('builderdisplay2',tiles[selectedTilesArray[0]].gradients)}` 
                                     : null,
-                                height: `${zoomCanvasSize}px`,
-                                width: `${Number.parseInt(zoomCanvasSize*aspectRatio)}px`,
+                                //height: `${Number.parseInt(zoomCanvasSize.height)}px`,
+                                //width: `${Number.parseInt(zoomCanvasSize.width)}px`,
+                                    height: `${getCanvasContainerHeight()}px`,
+                                    maxHeight: `${getCanvasContainerHeight()}px`,
+                                    width: `100%`,
+                                    maxWidth: '500px'
                             }}
                         >
-                        {/* {visibleBackgrounds()} */}
+                        {selectedTilesArray[0]!=undefined && selectedSubTilesArray[0]!=undefined  ?
+                            visibleBackgrounds('builderdisplay1',tiles[selectedTilesArray[0]].subTiles[selectedSubTilesArray[0]].gradients)
+                        : selectedTilesArray[0]!=undefined ?
+                            visibleBackgrounds('builderdisplay2',tiles[selectedTilesArray[0]].gradients): null}
                         </div>
                         <GradientBuilder
                             gradients={selectedTilesArray[0]!=undefined && selectedSubTilesArray[0]!=undefined ? tiles[selectedTilesArray[0]].subTiles[selectedSubTilesArray[0]].gradients : selectedTilesArray[0]!=undefined ? tiles[selectedTilesArray[0]].gradients : []}
@@ -1163,8 +1370,9 @@ export default function App() {
                             handleActiveStop={handleActiveStop}
                             activeGradient={activeGradient}
                             handleActiveGradient={handleActiveGradient}
-                            height={zoomCanvasSize}
-                            width={zoomCanvasSize*aspectRatio}
+                            height={zoomCanvasSize.height}
+                            width={zoomCanvasSize.width}
+                            handleColorSwitch={handleColorSwitch}
                         ></GradientBuilder>
                 </div>
                 <div className="col-span-3 row-span-3 col-start-3 border">
@@ -1195,8 +1403,8 @@ export default function App() {
                                             subSplitY={subSplitY}
                                             subsegmentSizeX={subsegmentSizeX}
                                             subsegmentSizeY={subsegmentSizeY}
-                                            canvasRef={canvasRef}
-                                            zoomCanvasSize={zoomCanvasSize}
+                                            //canvasRef={canvasRef}
+                                            //zoomCanvasSize={zoomCanvasSize}
                                             handleTileClick={handleTileClick}
                                             refContainer={refContainer}
                                             selectedTilesArray={selectedTilesArray}

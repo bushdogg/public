@@ -57,7 +57,7 @@ const b = parseInt(parts[3]).toString(16).padStart(2, '0');
 return `#${r}${g}${b}`;
 };
 
-const GradientStops = ({gradientIndex, stops, handleGradientsStopChange, handleAddStop, activeStop, handleActiveStop, handleStopBlur, handleRemoveStop}) => {
+const GradientStops = ({gradientIndex, stops, handleGradientsStopChange, handleAddStop, activeStop, handleActiveStop, handleStopBlur, handleRemoveStop, handleColorSwitch}) => {
     
     const initialDisplayColorPicker = () => {
         let array = []
@@ -174,6 +174,10 @@ const GradientStops = ({gradientIndex, stops, handleGradientsStopChange, handleA
                     <button 
                         className="whitespace-nowrap rounded-radius bg-blue-700 border border-blue-700 px-3 py-1 text-white text-sm font-medium tracking-wide "
                         onClick={() => handleAddStop(gradientIndex, newStopPosition)}>Add Color Stop</button>
+                    <button 
+                        className="whitespace-nowrap rounded-radius bg-blue-700 border border-blue-700 px-3 py-1 text-white text-sm font-medium tracking-wide"
+                        onClick={() => handleColorSwitch(gradientIndex)}
+                        >Switch Colors</button>
                 </div>
             </div>
         </>

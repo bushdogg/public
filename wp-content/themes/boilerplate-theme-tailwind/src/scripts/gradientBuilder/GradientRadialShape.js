@@ -28,7 +28,7 @@ const GradientRadialShape = ({gradientsIndex, radialShape, handleGradientsChange
         } else if (shape ==='custom') {
             radialShapeCSS = width + widthUOM + ' ' + height + heightUOM + ' at '
         }
-        console.log(radialShapeCSS)
+        //console.log(radialShapeCSS)
         handleGradientsChange(gradientsIndex, 'radialShape', radialShapeCSS)
 
 

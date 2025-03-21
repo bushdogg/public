@@ -1,26 +1,27 @@
-import React from 'react';
+import React, {useEffect, useState, useRef} from 'react';
 //import PropTypes from 'prop-types';
 
-const Canvas = ( {draw, height, width, clicked, stateChanger, canvasRef, handleCanvasClick} ) => { // CHANGED
-//   canvasRef = React.useRef();
-//   //canvasRef = React.createRef();
+const Canvas = ( { canvasRef, handleCanvasClick, aspectRatio, handleCanvasDimensions, height, width} ) => { // CHANGED
+    //const canvasRef = useRef(null);
+    function myFunc(element) {
+        return element.getBoundingClientRect();
+      }
+      
+      useEffect(() => {
+        const elementDimensions = myFunc(canvasRef.current);
+        handleCanvasDimensions(() => elementDimensions);
+      },[]);
 
-//   React.useEffect(() => {
-//     if (canvasRef.current) {
-//         const context = canvasRef.current.getContext('2d', {willReadFrequently: true}); 
-//         draw(context);
-//         const dataUrl = canvasRef.current.toDataURL('image/jpeg');
-//         stateChanger(dataUrl)
-    
-//     }
-//   },[clicked]);
-
-  return (
+    return (
     <canvas
+      id='canvas-2'
+      className={`h-full w-full relative`}
       ref={canvasRef}
       width={width}  // CHANGED
       height={height} // CHANGED
-      onClick={handleCanvasClick}
+      //style={{height: `${100*aspectRatio}%`, 
+     //width: `100%`}}
+      onClick={(e) => handleCanvasClick(e)}
     />
   )
 }

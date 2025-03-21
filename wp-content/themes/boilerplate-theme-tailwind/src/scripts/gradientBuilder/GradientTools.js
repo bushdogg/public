@@ -3,8 +3,9 @@ import GradientStops from './GradientStops.js'
 import GradientAngle from './GradientAngle.js'
 import GradientPosition from './GradientPosition.js'
 import GradientRadialShape from './GradientRadialShape.js'
+import GradientBackground from './GradientBackground.js'
 
-const GradientTools = ({gradientIndex, gradient, handleGradientsChange, handleGradientsStopChange, handleAngleChange, handleAddStop, activeStop, handleActiveStop, handleRemoveStop, handleStopBlur}) => {
+const GradientTools = ({gradientIndex, gradient, handleGradientsChange, handleGradientsStopChange, handleAngleChange, handleAddStop, activeStop, handleActiveStop, handleRemoveStop, handleStopBlur, handleColorSwitch}) => {
     
     return (
         <>
@@ -55,6 +56,7 @@ const GradientTools = ({gradientIndex, gradient, handleGradientsChange, handleGr
                     activeStop={activeStop}
                     handleActiveStop={handleActiveStop}
                     handleStopBlur={handleStopBlur}
+                    handleColorSwitch={handleColorSwitch}
                 ></GradientStops>
                 {gradient.gradientType==='radial' ? 
                     <GradientRadialShape 
@@ -70,6 +72,9 @@ const GradientTools = ({gradientIndex, gradient, handleGradientsChange, handleGr
                     handleGradientsChange={handleGradientsChange}
                     yposition={gradient.yposition}
                 ></GradientPosition>
+                <GradientBackground
+                    gradientIndex={gradientIndex}
+                ></GradientBackground>
             </div>
         </>
     )
